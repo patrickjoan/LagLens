@@ -26,7 +26,7 @@ xmax, ymax = transformer.transform(180, 85)
 
 
 def draw_world_map(columns: int, lines: int) -> str:
-        """
+    """
     Draws a simple ASCII world map based on the given dimensions.
 
     Args:
