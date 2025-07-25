@@ -8,7 +8,10 @@ from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Static
-from world_map import draw_world_map
+from world_map import WorldMap
+
+# Initialize the WorldMap instance
+world_map = WorldMap(data_file="data/world_countries.json")
 
 
 class LagLensApp(App):
@@ -56,7 +59,7 @@ class LagLensApp(App):
         height = map_widget.size.height
 
         if width > 0 and height > 0:
-            map_text = draw_world_map(columns=width, lines=height)
+            map_text = world_map.draw(columns=width, lines=height)
             map_widget.update(map_text)
         else:
             self.log("Map widget size is not initialized yet.")
