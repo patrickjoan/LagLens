@@ -1,0 +1,46 @@
+[project]
+name = "laglens"
+version = "0.1.0"
+description = "TUI world latency monitor"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["ping3>=4.0.8", "textual>=5.0.0"]
+
+[dependency-groups]
+dev = ["mypy>=1.17.0", "ruff>=0.12.5"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # Pyflakes
+  "I",    # Isort
+  "C",    # Complexity
+  "N",    # Naming conventions
+  "D",    # Pydocstyle (optional, can be noisy)
+  "UP",   # Pyupgrade
+  "B",    # Bugbear
+  "SIM",  # Simplifiable
+  "A",    # Builtin shadowing
+  "PERF", # Perflint
+]
+ignore = [
+  "D100", # Missing docstring in public module (if you prefer not to require module docstrings initially)
+  "D104", # Missing docstring in public package (for __init__.py)
+  "D105", # Missing docstring in magic method
+]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+check_untyped_defs = true
+ignore_missing_imports = true
+exclude = ["venv/", ".venv/", "build/", "dist/"]
