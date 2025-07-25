@@ -1,4 +1,3 @@
-
 from ping3 import errors, ping
 from rich.text import Text
 
@@ -17,7 +16,7 @@ def ping_server(host: str, timeout: int = 2) -> int | None:
     try:
         delay_seconds = ping(host, timeout=timeout, unit="s")
         if delay_seconds is not None:
-            return delay_seconds * 1000
+            return int(delay_seconds * 1000)
         else:
             return None
     except errors.PingError as e:

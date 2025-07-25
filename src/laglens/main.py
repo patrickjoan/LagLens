@@ -29,7 +29,7 @@ class LagLensApp(App):
             ascii_map,
             Static(id="ping-results", classes="right-panel"),
         )
-        yield Footer()
+        yield Footer(show_command_palette=False)
 
     def on_mount(self) -> None:
         """Call when the app is mounted."""
@@ -65,10 +65,10 @@ class LagLensApp(App):
             self.log("Map widget size is not initialized yet.")
 
     async def periodic_ping_updates(self) -> None:
-        """Run update_ping_results every 10 seconds."""
+        """Run update_ping_results every 1 seconds."""
         while True:
             await self.update_ping_results()
-            await asyncio.sleep(10)
+            await asyncio.sleep(1)
 
     async def update_ping_results(self) -> None:
         """Perform pings asynchronously and update the TUI with results."""
@@ -79,7 +79,7 @@ class LagLensApp(App):
         tasks = [self.ping_server_async(server) for server in self.servers]
         results = await asyncio.gather(*tasks)
 
-        for server, (latency, indicator_text) in zip(
+        for server, (_latency, indicator_text) in zip(
             self.servers, results, strict=False
         ):
             results_text.append(f"{server:<25}: ")

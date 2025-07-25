@@ -10,7 +10,9 @@ from shapely.ops import transform
 class WorldMap:
     """A class to handle world map data and generate ASCII representations."""
 
-    def __init__(self, data_file: str, crs_from: str = "EPSG:4326", crs_to: str = "EPSG:3857"):
+    def __init__(
+        self, data_file: str, crs_from: str = "EPSG:4326", crs_to: str = "EPSG:3857"
+    ):
         """Initialize the WorldMap instance.
 
         Args:
@@ -26,16 +28,20 @@ class WorldMap:
         # Load and transform geometries
         self.geoms = self._load_geometries()
         self.transformer = pyproj.Transformer.from_crs(crs_from, crs_to, always_xy=True)
-        self.geoms = [transform(self.transformer.transform, geom) for geom in self.geoms]
+        self.geoms = [
+            transform(self.transformer.transform, geom) for geom in self.geoms
+        ]
 
         # Create spatial index
-        self.index = rtree.index.Index((n, geom.bounds, geom) for n, geom in enumerate(self.geoms))
+        self.index = rtree.index.Index(
+            (n, geom.bounds, geom) for n, geom in enumerate(self.geoms)
+        )
 
         # Define map boundaries
         self.xmin, self.ymin = self.transformer.transform(-180, -75)
         self.xmax, self.ymax = self.transformer.transform(180, 85)
 
-    def _load_geometries(self):
+    def _load_geometries(self) -> list:
         """Load geometries from the GeoJSON file."""
         with open(self.data_file) as f:
             data = json.load(f)
