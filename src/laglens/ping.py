@@ -14,9 +14,9 @@ def ping_server(host: str, timeout: int = 2) -> int | None:
 
     """
     try:
-        delay_seconds = ping(host, timeout=timeout, unit="s")
+        delay_seconds = ping(host, timeout=timeout, unit="ms")
         if delay_seconds is not None:
-            return int(delay_seconds * 1000)
+            return int(delay_seconds)
         else:
             return None
     except errors.PingError as e:
@@ -33,9 +33,9 @@ def get_latency_indicator(latency_ms: float | None) -> Text:
     if latency_ms is None:
         text.append("🔴 FAILED", style="red bold")
     elif latency_ms < 100:
-        text.append(f"🟢 {latency_ms:.2f} ms", style="green")
+        text.append(f"🟢 {latency_ms:} ms", style="green")
     elif 100 <= latency_ms <= 300:
-        text.append(f"🟡 {latency_ms:.2f} ms", style="yellow")
+        text.append(f"🟡 {latency_ms:} ms", style="yellow")
     else:  # latency_ms > 300
-        text.append(f"🔴 {latency_ms:.2f} ms", style="red")
+        text.append(f"🔴 {latency_ms:} ms", style="red")
     return text
