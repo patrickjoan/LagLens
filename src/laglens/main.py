@@ -6,7 +6,9 @@ from ping import get_latency_indicator, ping_server
 from rich.panel import Panel
 from rich.text import Text
 from textual.app import App, ComposeResult
+from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Static
+from world_map import draw_world_map
 
 
 class LagLensApp(App):
@@ -17,10 +19,13 @@ class LagLensApp(App):
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
+        ascii_map = Static(id="ascii-map", classes="center-panel")
+
         yield Header()
-        yield Static("Left", classes="left-panel")
-        yield Static(id="ascii-map", classes="center-panel")
-        yield Static(id="ping-results", classes="right-panel")
+        yield Horizontal(
+            ascii_map,
+            Static(id="ping-results", classes="right-panel"),
+        )
         yield Footer()
 
     def on_mount(self) -> None:
@@ -39,7 +44,22 @@ class LagLensApp(App):
         ]
         self.results_text = "Initializing UI...\n"
 
+        # Initial map update after a short delay to ensure widget sizes are initialized
+        self.set_timer(0.5, self.update_world_map)
+
         asyncio.create_task(self.periodic_ping_updates())
+
+    def update_world_map(self) -> None:
+        """Update the world map dynamically based on widget size."""
+        map_widget = self.query_one("#ascii-map", Static)
+        width = map_widget.size.width
+        height = map_widget.size.height
+
+        if width > 0 and height > 0:
+            map_text = draw_world_map(columns=width, lines=height)
+            map_widget.update(map_text)
+        else:
+            self.log("Map widget size is not initialized yet.")
 
     async def periodic_ping_updates(self) -> None:
         """Run update_ping_results every 10 seconds."""
