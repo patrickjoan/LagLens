@@ -6,7 +6,6 @@ from ping import get_latency_indicator, ping_server
 from rich.panel import Panel
 from rich.text import Text
 from textual.app import App, ComposeResult
-from textual.containers import Container
 from textual.widgets import Footer, Header, Static
 
 
@@ -19,12 +18,12 @@ class LagLensApp(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         yield Header()
-        yield Container(
-            Static("Pinging servers...\n", id="ping-results"), id="main-container"
-        )
+        yield Static("Left", classes="left-panel")
+        yield Static(id="ascii-map", classes="center-panel")
+        yield Static(id="ping-results", classes="right-panel")
         yield Footer()
 
-    async def on_mount(self) -> None:
+    def on_mount(self) -> None:
         """Call when the app is mounted."""
         self.servers = [
             "google.com",
