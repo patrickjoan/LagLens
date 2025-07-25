@@ -2,7 +2,7 @@ from ping3 import errors, ping
 from rich.text import Text
 
 
-def ping_server(host: str, timeout: int = 2) -> int | None:
+def ping_server(host: str, timeout: int = 5) -> int | None:
     """Ping a server using ping3 and return the response time in milliseconds.
 
     Args:

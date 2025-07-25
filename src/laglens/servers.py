@@ -6,8 +6,8 @@ GLOBAL_SERVERS = [
         "longitude": -77.4875,
     },
     {
-        "name": "AWS US West (Oregon)",
-        "ip": "54.240.0.0",  # Example from AWS IP range
+        "name": "Amazon AWS - US West (Oregon)",
+        "ip": "1.178.8.0",
         "latitude": 45.5231,
         "longitude": -122.6765,
     },
@@ -71,4 +71,24 @@ GLOBAL_SERVERS = [
         "latitude": 0.0,
         "longitude": 0.0,
     },
+]
+
+AWS_SERVERS = [
+    # North America
+    {"name": "us-east-1", "ip": "3.5.140.0"},
+    
+    # South America
+    {"name": "sa-east-1", "ip": "15.228.0.0"},
+    
+    # Europe
+    {"name": "eu-west-3", "ip": "35.180.0.0"},
+    
+    # Asia
+    {"name": "ap-southeast-1", "ip": "35.71.118.0"},
+
+    # Africa
+    {"name": "af-south-1", "ip": "113.247.0.0"},
+
+    # Oceania
+    {"name": "ap-southeast-2", "ip": "3.104.0.0"},
 ]

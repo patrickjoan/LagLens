@@ -5,7 +5,7 @@ from config import BINDINGS, CSS
 from ping import get_latency_indicator, ping_server
 from rich.panel import Panel
 from rich.text import Text
-from servers import GLOBAL_SERVERS
+from servers import GLOBAL_SERVERS, AWS_SERVERS
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Static
@@ -34,7 +34,8 @@ class LagLensApp(App):
 
     def on_mount(self) -> None:
         """Call when the app is mounted."""
-        self.servers = GLOBAL_SERVERS
+        # self.servers = GLOBAL_SERVERS
+        self.servers = AWS_SERVERS
         self.results_text = "Initializing UI...\n"
 
         # Initial map update after a short delay to ensure widget sizes are initialized
@@ -55,10 +56,10 @@ class LagLensApp(App):
             self.log("Map widget size is not initialized yet.")
 
     async def periodic_ping_updates(self) -> None:
-        """Run update_ping_results every 1 seconds."""
+        """Run update_ping_results every 5 seconds."""
         while True:
             await self.update_ping_results()
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
 
     async def update_ping_results(self) -> None:
         """Perform pings asynchronously and update the TUI with results."""
