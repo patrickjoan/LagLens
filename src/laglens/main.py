@@ -5,6 +5,7 @@ from config import BINDINGS, CSS
 from ping import get_latency_indicator, ping_server
 from rich.panel import Panel
 from rich.text import Text
+from servers import GLOBAL_SERVERS
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Static
@@ -33,18 +34,7 @@ class LagLensApp(App):
 
     def on_mount(self) -> None:
         """Call when the app is mounted."""
-        self.servers = [
-            "google.com",
-            "cloudflare.com",
-            "aws.amazon.com",
-            "microsoft.com",
-            "github.com",
-            "youtube.com",
-            "baidu.com",
-            "bad-host-name-xyz.com",
-            "192.0.2.1",
-            "openstack.org",
-        ]
+        self.servers = GLOBAL_SERVERS
         self.results_text = "Initializing UI...\n"
 
         # Initial map update after a short delay to ensure widget sizes are initialized
@@ -76,16 +66,21 @@ class LagLensApp(App):
             f"--- Last Update: {time.strftime('%H:%M:%S')} ---\n\n", style="bold white"
         )
 
-        tasks = [self.ping_server_async(server) for server in self.servers]
-        results = await asyncio.gather(*tasks)
+        # Create tasks for pinging servers
+        tasks = [self.ping_server_async(server["ip"]) for server in self.servers]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        for server, (_latency, indicator_text) in zip(
-            self.servers, results, strict=False
-        ):
-            results_text.append(f"{server:<25}: ")
-            results_text.append(indicator_text)
-            results_text.append("\n")
+        for server, result in zip(self.servers, results):
+            if isinstance(result, Exception):
+                # Handle errors gracefully
+                results_text.append(f"{server['name']:<25}: Error\n", style="bold red")
+            else:
+                latency, indicator_text = result
+                results_text.append(f"{server['name']:<25}: ")
+                results_text.append(indicator_text)
+                results_text.append("\n")
 
+        # Update the UI
         ping_results_widget = self.query_one("#ping-results", Static)
         ping_results_widget.update(
             Panel(results_text, title="Latency Map Data", border_style="dim white")
@@ -93,9 +88,13 @@ class LagLensApp(App):
 
     async def ping_server_async(self, server: str) -> tuple:
         """Ping a server asynchronously and return latency and indicator text."""
-        latency = await asyncio.to_thread(ping_server, server)
-        indicator_text = get_latency_indicator(latency)
-        return latency, indicator_text
+        try:
+            latency = await asyncio.to_thread(ping_server, server)
+            indicator_text = get_latency_indicator(latency)
+            return latency, indicator_text
+        except Exception as e:
+            self.log(f"Error pinging server {server}: {e}")
+            raise
 
     async def action_quit(self) -> None:
         """Quit the application."""
