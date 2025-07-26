@@ -4,7 +4,7 @@ from datetime import datetime
 from statistics import LatencyHistory, TrendWidget
 
 from config.servers import AWS_SERVERS
-from config.textual_config import BINDINGS, CSS
+from config.textual_config import BINDINGS
 from ping import get_latency_indicator, ping_server
 from rich.panel import Panel
 from rich.text import Text
@@ -18,7 +18,7 @@ class LagLensApp(App):
     """A Textual application to visualize network latency."""
 
     BINDINGS = BINDINGS
-    CSS = CSS
+    CSS_PATH = "config/laglens.tcss"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -44,7 +44,7 @@ class LagLensApp(App):
         """Call when the app is mounted."""
         self.servers = AWS_SERVERS
         self.results_text = "Initializing UI...\n"
-        self.latest_latencies = {}  # Store latest ping results by server IP
+        self.latest_latencies = {}
 
         # Initial map update after a short delay to ensure widget sizes are initialized
         self.set_timer(0.5, self.update_world_map)
@@ -161,7 +161,7 @@ class LagLensApp(App):
 
         stats_widget = self.query_one("#statistics", Static)
         stats_widget.update(
-            Panel(stats_text, title="Statistics", border_style="dim blue")
+            Panel(stats_text, title="Statistics", border_style="dim white")
         )
 
     async def ping_server_async(self, server: str) -> tuple:
