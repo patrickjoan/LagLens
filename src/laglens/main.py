@@ -5,7 +5,7 @@ from config import BINDINGS, CSS
 from ping import get_latency_indicator, ping_server
 from rich.panel import Panel
 from rich.text import Text
-from servers import GLOBAL_SERVERS, AWS_SERVERS
+from servers import AWS_SERVERS
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Static
@@ -37,6 +37,7 @@ class LagLensApp(App):
         # self.servers = GLOBAL_SERVERS
         self.servers = AWS_SERVERS
         self.results_text = "Initializing UI...\n"
+        self.latest_latencies = {}  # Store latest ping results by server IP
 
         # Initial map update after a short delay to ensure widget sizes are initialized
         self.set_timer(0.5, self.update_world_map)
@@ -50,10 +51,34 @@ class LagLensApp(App):
         height = map_widget.size.height
 
         if width > 0 and height > 0:
-            map_text = world_map.draw(columns=width, lines=height)
+            servers_with_indicators = []
+            for server in self.servers:
+                indicator = self.get_server_indicator(server)  # "🔴", "🟡", "🟢", etc.
+                servers_with_indicators.append(
+                    {
+                        "latitude": server["latitude"],
+                        "longitude": server["longitude"],
+                        "indicator": indicator,
+                    }
+                )
+
+            map_text = world_map.draw(
+                columns=width, lines=height, servers=servers_with_indicators
+            )
             map_widget.update(map_text)
         else:
             self.log("Map widget size is not initialized yet.")
+    def get_server_indicator(self, server) -> str:
+        """Get the indicator for a server based on its current latency."""
+        latency = self.latest_latencies.get(server["ip"])
+        if latency is not None:
+            if latency < 100:
+                return "🟢"
+            elif 100 <= latency <= 300:
+                return "🟡"
+            else:
+                return "🔴"
+        return "●"
 
     async def periodic_ping_updates(self) -> None:
         """Run update_ping_results every 5 seconds."""
@@ -71,12 +96,13 @@ class LagLensApp(App):
         tasks = [self.ping_server_async(server["ip"]) for server in self.servers]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        for server, result in zip(self.servers, results):
+        for server, result in zip(self.servers, results, strict=False):
             if isinstance(result, Exception):
                 # Handle errors gracefully
                 results_text.append(f"{server['name']:<25}: Error\n", style="bold red")
             else:
                 latency, indicator_text = result
+                self.latest_latencies[server["ip"]] = latency
                 results_text.append(f"{server['name']:<25}: ")
                 results_text.append(indicator_text)
                 results_text.append("\n")
@@ -86,6 +112,8 @@ class LagLensApp(App):
         ping_results_widget.update(
             Panel(results_text, title="Latency Map Data", border_style="dim white")
         )
+
+        self.update_world_map()
 
     async def ping_server_async(self, server: str) -> tuple:
         """Ping a server asynchronously and return latency and indicator text."""
