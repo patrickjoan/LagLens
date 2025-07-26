@@ -75,7 +75,7 @@ GLOBAL_SERVERS = [
 
 AWS_SERVERS = [
     # North America
-    {"name": "us-east-1", "ip": "3.5.140.0"},
+    {"name": "us-east-1", "ip": "99.82.166.0"},
     
     # South America
     {"name": "sa-east-1", "ip": "15.228.0.0"},
@@ -87,7 +87,7 @@ AWS_SERVERS = [
     {"name": "ap-southeast-1", "ip": "35.71.118.0"},
 
     # Africa
-    {"name": "af-south-1", "ip": "113.247.0.0"},
+    {"name": "af-south-1", "ip": "13.246.0.0"},
 
     # Oceania
     {"name": "ap-southeast-2", "ip": "3.104.0.0"},
