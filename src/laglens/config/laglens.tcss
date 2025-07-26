@@ -1,95 +1,69 @@
-Screen {
-    background: #202020;
-    layout: horizontal;
-}
-
 .right-panel {
-    background: #003366;
     width: 1fr;
     layout: vertical;
 }
 
 .right-top-panel {
+    height: 1fr;
+    min-height: 15;
     background: #252525;
     border: solid #404040;
-    width: 1fr;
-    height: 1fr;
     padding: 1 2;
-    overflow-y: auto;
-    margin: 1 0;
-    min-height: 10;
 }
 
 .right-bottom-panel {
+    height: 1fr;
+    min-height: 25;
     background: #252525;
     border: solid #404040;
-    width: 1fr;
-    height: auto;
-    padding: 1 2;
     overflow-y: auto;
-    margin: 1 0;
-    min-height: 15;
-    max-height: 40;
+    padding: 1;
 }
 
-.stats-panel {
+.individual-server-container {
     height: auto;
+    min-height: 12;
+    max-height: 15;
     width: 1fr;
-    background: #252525;
-    padding: 1 2;
+    margin: 1 0;
+    layout: vertical;
+}
+
+.server-stats {
+    height: auto;
     min-height: 8;
+    max-height: 10;
+    width: 1fr;
+    background: #2a2a2a;
+    padding: 0;
 }
 
 .server-sparkline {
-    height: 3;
+    height: 4;
     width: 1fr;
-    margin: 0 2;
     background: #1a1a1a;
     border: solid #444444;
+    margin: 1 0 0 0;
 }
 
 .server-sparkline .sparkline--min-color {
-    color: #00ff00;
+    color: green;
 }
 
 .server-sparkline .sparkline--max-color {
-    color: #ff0000;
+    color: red;
 }
 
-#ping-results {
+#servers-container {
+    layout: vertical;
     height: 1fr;
-    width: 1fr;
-    padding: 1 2;
-    background: #252525;
-    border: solid #404040;
-    overflow-y: auto;
-}
-
-#statistics-container {
-    height: auto;
-    width: 1fr;
-    background: #252525;
-    border: solid #404040;
-    overflow-y: auto;
     min-height: 20;
-    max-height: 40;
 }
 
 #ascii-map {
-    height: 1fr;
     width: 3fr;
-    padding: 1 2;
+    height: 1fr;
     background: #252525;
     border: solid #404040;
-    overflow-y: auto;
-}
-
-Header {
-    background: #303030;
-    color: white;
-}
-
-Footer {
-    background: #303030;
-    color: white;
+    padding: 1 2;
 }

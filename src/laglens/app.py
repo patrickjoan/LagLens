@@ -1,7 +1,7 @@
 import asyncio
 import time
 from datetime import datetime
-from statistics import LatencyHistory, TrendWidget
+from statistics import LatencyHistory, LatencySparkline
 
 from config.servers import AWS_SERVERS
 from config.textual_config import BINDINGS
@@ -9,8 +9,8 @@ from ping import get_latency_indicator, ping_server
 from rich.panel import Panel
 from rich.text import Text
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, Vertical
-from textual.widgets import Footer, Header, Static
+from textual.containers import Horizontal, Vertical, ScrollableContainer
+from textual.widgets import Footer, Header, Static, Sparkline
 from world_map import WorldMap
 
 
@@ -24,7 +24,7 @@ class LagLensApp(App):
         super().__init__(**kwargs)
         self.world_map = WorldMap(data_file="data/world_countries.json")
         self.latency_history = LatencyHistory()
-        self.trend_widget = TrendWidget(self.latency_history)
+        self.sparklines = {}  # Store sparkline instances for each server
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
@@ -33,12 +33,51 @@ class LagLensApp(App):
         yield Header()
         yield Horizontal(
             ascii_map,
-            Vertical(
-                Static(id="ping-results"),
-                Static(id="statistics", classes="right-bottom-panel"),
+            ScrollableContainer(
+                Static(id="ping-results", classes="right-top-panel"),
+                ScrollableContainer(
+                    *self._create_server_containers(),
+                    id="servers-container",
+                    classes="right-bottom-panel"
+                ),
+                classes="right-panel"
             ),
         )
         yield Footer(show_command_palette=False)
+
+    def _create_server_containers(self):
+        """Create individual server containers with stats and sparklines."""
+        server_containers = []
+        
+        for server in AWS_SERVERS:
+            server_ip = server["ip"]
+            server_name = server["name"]
+            
+            # Create LatencySparkline instance for this server
+            latency_sparkline = LatencySparkline([0.0])
+            self.sparklines[server_ip] = latency_sparkline
+            
+            # Create sparkline widget
+            sparkline_widget_id = f"sparkline-{server_ip.replace('.', '-')}"
+            sparkline_widget = latency_sparkline.create_sparkline(
+                widget_id=sparkline_widget_id,
+                widget_classes="server-sparkline"
+            )
+            
+            # Create server container with stats and sparkline
+            server_container = Vertical(
+                Static(
+                    id=f"stats-{server_ip.replace('.', '-')}", 
+                    classes="server-stats"
+                ),
+                sparkline_widget,
+                id=f"server-container-{server_ip.replace('.', '-')}",
+                classes="individual-server-container"
+            )
+            
+            server_containers.append(server_container)
+        
+        return server_containers
 
     def on_mount(self) -> None:
         """Call when the app is mounted."""
@@ -102,7 +141,6 @@ class LagLensApp(App):
             f"--- Last Update: {time.strftime('%H:%M:%S')} ---\n\n", style="bold white"
         )
 
-        # Create tasks for pinging servers
         tasks = [self.ping_server_async(server["ip"]) for server in self.servers]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -115,7 +153,6 @@ class LagLensApp(App):
             else:
                 latency, indicator_text = result
                 self.latest_latencies[server_ip] = latency
-
                 self.latency_history.add_measurement(server_ip, latency, current_time)
 
                 results_text.append(f"{server['name']:<25}: ")
@@ -128,41 +165,62 @@ class LagLensApp(App):
             Panel(results_text, title="Latency Results", border_style="dim white")
         )
 
-        self.update_statistics_panel()
-
+        # Update individual server containers
+        self.update_server_containers()
         self.update_world_map()
 
-    def update_statistics_panel(self) -> None:
-        """Update the statistics panel with current server statistics."""
-        stats_text = Text("--- Server Statistics (Last Hour) ---\n\n", style="bold white")
-
+    def update_server_containers(self) -> None:
+        """Update each server's individual container with stats and sparkline."""
         for server in self.servers:
             server_ip = server["ip"]
+            server_name = server["name"]
+            
+            # Get server statistics
             server_stats = self.latency_history.get_statistics(server_ip, window_minutes=60)
-
-            stats_text.append(f"{server['name'][:20]:<20}\n", style="bold white")
-
+            
+            # Create stats text for this server
+            stats_text = Text(f"{server_name}\n", style="bold white")
+            
             if server_stats["avg"] is not None:
-                stats_text.append(f"  Avg: {server_stats['avg']:.1f}ms\n", style="white")
-                stats_text.append(f"  Min: {server_stats['min']:.1f}ms\n", style="green")
-                stats_text.append(f"  Max: {server_stats['max']:.1f}ms\n", style="red")
-                stats_text.append(f"  Jitter: {server_stats['jitter']:.1f}ms\n", style="yellow")
-                stats_text.append(f"  Loss: {server_stats['packet_loss']:.1f}%\n", style="magenta")
-
-                # Add trend sparkline
-                trend = self.trend_widget.render_trend_graph(server_ip, minutes=30)
-                stats_text.append("  Trend: ")
-                stats_text.append(trend)
-                stats_text.append("\n")
+                stats_text.append(f"Avg: {server_stats['avg']:.1f}ms\n", style="white")
+                stats_text.append(f"Min: {server_stats['min']:.1f}ms\n", style="green")
+                stats_text.append(f"Max: {server_stats['max']:.1f}ms\n", style="red")
+                stats_text.append(f"Jitter: {server_stats['jitter']:.1f}ms\n", style="yellow")
+                stats_text.append(f"Loss: {server_stats['packet_loss']:.1f}%", style="magenta")
+                
+                # Update sparkline
+                self.update_sparkline_for_server(server_ip)
             else:
-                stats_text.append("  No data available\n", style="dim")
+                stats_text.append("No data available", style="dim")
+            
+            # Update the stats widget for this server
+            try:
+                stats_widget_id = f"stats-{server_ip.replace('.', '-')}"
+                stats_widget = self.query_one(f"#{stats_widget_id}", Static)
+                stats_widget.update(
+                    Panel(
+                        stats_text, 
+                        title=f"{server_name[:15]} Stats", 
+                        border_style="dim blue"
+                    )
+                )
+            except Exception as e:
+                self.log(f"Failed to update stats for {server_ip}: {e}")
 
-            stats_text.append("\n")
-
-        stats_widget = self.query_one("#statistics", Static)
-        stats_widget.update(
-            Panel(stats_text, title="Statistics", border_style="dim white")
-        )
+    def update_sparkline_for_server(self, server_ip: str):
+        """Update the sparkline widget for a specific server."""
+        try:
+            sparkline_data = self.latency_history.get_sparkline_data(server_ip, minutes=30)
+            
+            if server_ip in self.sparklines:
+                self.sparklines[server_ip].data = sparkline_data
+                
+                widget_id = f"sparkline-{server_ip.replace('.', '-')}"
+                sparkline_widget = self.query_one(f"#{widget_id}", Sparkline)
+                self.sparklines[server_ip].update_sparkline_widget(sparkline_widget)
+            
+        except Exception as e:
+            self.log(f"Failed to update sparkline for {server_ip}: {e}")
 
     async def ping_server_async(self, server: str) -> tuple:
         """Ping a server asynchronously and return latency and indicator text."""
