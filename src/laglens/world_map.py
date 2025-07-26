@@ -48,7 +48,38 @@ class WorldMap:
             data = json.load(f)
         return [shape(feature["geometry"]) for feature in data["features"]]
 
-    def draw(self, columns: int, lines: int, servers: list = None) -> Text:
+    def _is_land_cell(self, x: float, y: float) -> bool:
+        """Return True if the given coordinates are land, else False."""
+        return any(
+            (geom := n_obj.object) and geom.intersects(Point(x, y))
+            for n_obj in self.index.intersection((x, y, x, y), objects=True)
+        )
+
+    def _get_server_grid_positions(
+        self,
+        servers: list,
+        pixel_width: float,
+        pixel_height: float,
+        columns: int,
+        lines: int,
+    ) -> dict:
+        """Map server lat/lon to grid positions and return a dict of (row, col): indicator."""
+        server_positions = {}
+        for server in servers:
+            x, y = self.transformer.transform(server["longitude"], server["latitude"])
+            col = int((x - self.xmin) / pixel_width)
+            row = int((self.ymax - y) / pixel_height)
+            if 0 <= col < columns and 0 <= row < lines:
+                server_positions[(row, col)] = server.get("indicator", "●")
+        return server_positions
+
+    def _get_indicator_style(
+        self, indicator: str, indicator_styles: dict
+    ) -> str | None:
+        """Return the style for a given indicator, or None if not found."""
+        return indicator_styles.get(indicator)
+
+    def draw(self, columns: int, lines: int, servers: list | None = None) -> Text:
         """Draw an ASCII representation of the world map with server indicators.
 
         Args:
@@ -70,52 +101,51 @@ class WorldMap:
         water = " "
         result_text = Text()
 
-        # Calculate pixel dimensions
         pixel_width = (self.xmax - self.xmin) / columns
         pixel_height = (self.ymax - self.ymin) / lines
 
-        # Create a mapping of server positions to indicators
-        server_positions = {}
-        if servers:
-            for server in servers:
-                # Transform lat/lon to map coordinates
-                x, y = self.transformer.transform(server["longitude"], server["latitude"])
+        # Precompute land/water grid
+        land_grid = [
+            [
+                self._is_land_cell(
+                    self.xmin + (col + 0.5) * pixel_width,
+                    self.ymax - (line + 0.5) * pixel_height,
+                )
+                for col in range(columns)
+            ]
+            for line in range(lines)
+        ]
 
-                # Convert to grid coordinates
-                col = int((x - self.xmin) / pixel_width)
-                row = int((self.ymax - y) / pixel_height)
+        # Map server positions to indicators
+        server_positions = (
+            self._get_server_grid_positions(
+                servers, pixel_width, pixel_height, columns, lines
+            )
+            if servers
+            else {}
+        )
 
-                # Ensure coordinates are within bounds
-                if 0 <= col < columns and 0 <= row < lines:
-                    server_positions[(row, col)] = server.get("indicator", "●")
+        indicator_styles = {
+            "🟢": "green",
+            "🟡": "yellow",
+            "🔴": "red",
+        }
 
         for line in range(lines):
             for col in range(columns):
-                # Check if there's a server at this position
-                if (line, col) in server_positions:
-                    indicator = server_positions[(line, col)]
-                    # Add the indicator with appropriate styling
-                    if "🟢" in indicator:
-                        result_text.append(indicator, style="green")
-                    elif "🟡" in indicator:
-                        result_text.append(indicator, style="yellow")
-                    elif "🔴" in indicator:
-                        result_text.append(indicator, style="red")
+                pos = (line, col)
+                if pos in server_positions:
+                    indicator = server_positions[pos]
+                    style = self._get_indicator_style(indicator, indicator_styles)
+                    if style:
+                        result_text.append(indicator, style=style)
                     else:
                         result_text.append(indicator)
                 else:
-                    x = self.xmin + (col + 0.5) * pixel_width
-                    y = self.ymax - (line + 0.5) * pixel_height
-
-                    is_land = any(
-                        geom.intersects(Point(x, y))
-                        for n_obj in self.index.intersection((x, y, x, y), objects=True)
-                        if (geom := n_obj.object)
-                    )
+                    is_land = land_grid[line][col]
                     char = land if is_land else water
-                    result_text.append(char, style="dim white" if is_land else "")
-
-            # Add newline at the end of each row (except the last one)
+                    style = "dim white" if is_land else ""
+                    result_text.append(char, style=style)
             if line < lines - 1:
                 result_text.append("\n")
 

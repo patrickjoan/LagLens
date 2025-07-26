@@ -1,11 +1,11 @@
 import asyncio
 import time
 
+from config.servers import AWS_SERVERS
 from config.textual_config import BINDINGS, CSS
 from ping import get_latency_indicator, ping_server
 from rich.panel import Panel
 from rich.text import Text
-from config.servers import AWS_SERVERS
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Static
