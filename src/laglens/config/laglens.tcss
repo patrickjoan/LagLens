@@ -1,14 +1,55 @@
+ScrollableContainer {
+    scrollbar-color: #404040;
+    scrollbar-color-hover: #505050;
+    scrollbar-color-active: #606060;
+    scrollbar-background: #1a1a1a;
+    scrollbar-background-hover: #252525;
+    scrollbar-background-active: #2a2a2a;
+    scrollbar-corner-color: #252525;
+    scrollbar-size-vertical: 1;
+}
+
 .right-panel {
-    width: 1fr;
+    scrollbar-color: #404040;
+    scrollbar-background: #252525;
+}
+
+/* Main layout: 75% center, 25% right */
+.center-panel {
+    width: 75%;
+    height: 1fr;
     layout: vertical;
 }
 
+.right-panel {
+    width: 25%;
+    layout: vertical;
+}
+
+/* Center panel split: 70% map, 30% bottom */
+.map-panel {
+    height: 70%;
+    width: 1fr;
+    background: #252525;
+    border: solid #404040;
+    padding: 1 2;
+}
+
+.bottom-center-panel {
+    height: 30%;
+    width: 1fr;
+    background: #252525;
+    border: solid #404040;
+    padding: 1 2;
+}
+
+/* Right panel sections */
 .right-top-panel {
     height: 1fr;
     min-height: 15;
     background: #252525;
     border: solid #404040;
-    padding: 1 2;
+    padding: 1 1;
 }
 
 .right-bottom-panel {
@@ -20,12 +61,13 @@
     padding: 1;
 }
 
+
 .individual-server-container {
     height: auto;
     min-height: 12;
     max-height: 15;
     width: 1fr;
-    margin: 1 0;
+    margin: 0 0;
     layout: vertical;
 }
 
@@ -36,14 +78,14 @@
     width: 1fr;
     background: #2a2a2a;
     padding: 0;
+    margin: 0 1 0 0;
 }
 
 .server-sparkline {
-    height: 4;
+    height: 2;
     width: 1fr;
-    background: #1a1a1a;
-    border: solid #444444;
-    margin: 1 0 0 0;
+    background: #2a2a2a;
+    margin: 0 0 0 0;
 }
 
 .server-sparkline .sparkline--min-color {
@@ -60,10 +102,22 @@
     min-height: 20;
 }
 
-#ascii-map {
-    width: 3fr;
-    height: 1fr;
-    background: #252525;
-    border: solid #404040;
-    padding: 1 2;
+
+/* Scrollbar styling */
+ScrollableContainer {
+    scrollbar-color: #404040;
+    scrollbar-color-hover: #505050;
+    scrollbar-color-active: #606060;
+    scrollbar-background: #1a1a1a;
+    scrollbar-background-hover: #252525;
+    scrollbar-background-active: #2a2a2a;
+    scrollbar-corner-color: #252525;
+    scrollbar-size-vertical: 1;
+}
+
+#servers-container {
+    scrollbar-color: #404040;
+    scrollbar-color-hover: #505050;        
+    scrollbar-background: #252525;
+    scrollbar-size-vertical: 1;
 }

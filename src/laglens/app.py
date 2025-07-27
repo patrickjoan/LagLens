@@ -4,13 +4,13 @@ from datetime import datetime
 from statistics import LatencyHistory, LatencySparkline
 
 from config.servers import AWS_SERVERS
-from config.textual_config import BINDINGS
+from config.config import BINDINGS
 from ping import get_latency_indicator, ping_server
 from rich.panel import Panel
 from rich.text import Text
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal, Vertical, ScrollableContainer
-from textual.widgets import Footer, Header, Static, Sparkline
+from textual.containers import Horizontal, ScrollableContainer, Vertical
+from textual.widgets import Footer, Header, Sparkline, Static
 from world_map import WorldMap
 
 
@@ -21,26 +21,41 @@ class LagLensApp(App):
     CSS_PATH = "config/laglens.tcss"
 
     def __init__(self, **kwargs):
+        """Initialize the main application.
+
+        Args:
+            **kwargs: Arbitrary keyword arguments passed to the superclass.
+
+        Attributes:
+            world_map (WorldMap): Instance for displaying the world map.
+            latency_history (LatencyHistory): Tracks latency data over time.
+            sparklines (dict): Stores sparkline instances for each server.
+        """
         super().__init__(**kwargs)
         self.world_map = WorldMap(data_file="data/world_countries.json")
         self.latency_history = LatencyHistory()
-        self.sparklines = {}  # Store sparkline instances for each server
+        self.sparklines = {}
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
-        ascii_map = Static(id="ascii-map", classes="center-panel")
+        ascii_map = Static(id="ascii-map", classes="map-panel")
+        bottom_center = Static(id="bottom-center", classes="bottom-center-panel")
 
         yield Header()
         yield Horizontal(
-            ascii_map,
+            Vertical(
+                ascii_map,          # 70% of center panel
+                bottom_center,      # 30% of center panel
+                classes="center-panel"
+            ),
             ScrollableContainer(
                 Static(id="ping-results", classes="right-top-panel"),
                 ScrollableContainer(
                     *self._create_server_containers(),
                     id="servers-container",
-                    classes="right-bottom-panel"
+                    classes="right-bottom-panel",
                 ),
-                classes="right-panel"
+                classes="right-panel",
             ),
         )
         yield Footer(show_command_palette=False)
@@ -48,35 +63,30 @@ class LagLensApp(App):
     def _create_server_containers(self):
         """Create individual server containers with stats and sparklines."""
         server_containers = []
-        
+
         for server in AWS_SERVERS:
             server_ip = server["ip"]
             server_name = server["name"]
-            
-            # Create LatencySparkline instance for this server
+
             latency_sparkline = LatencySparkline([0.0])
             self.sparklines[server_ip] = latency_sparkline
-            
-            # Create sparkline widget
+
             sparkline_widget_id = f"sparkline-{server_ip.replace('.', '-')}"
             sparkline_widget = latency_sparkline.create_sparkline(
-                widget_id=sparkline_widget_id,
-                widget_classes="server-sparkline"
+                widget_id=sparkline_widget_id, widget_classes="server-sparkline"
             )
-            
-            # Create server container with stats and sparkline
+
             server_container = Vertical(
                 Static(
-                    id=f"stats-{server_ip.replace('.', '-')}", 
-                    classes="server-stats"
+                    id=f"stats-{server_ip.replace('.', '-')}", classes="server-stats"
                 ),
                 sparkline_widget,
                 id=f"server-container-{server_ip.replace('.', '-')}",
-                classes="individual-server-container"
+                classes="individual-server-container",
             )
-            
+
             server_containers.append(server_container)
-        
+
         return server_containers
 
     def on_mount(self) -> None:
@@ -85,7 +95,6 @@ class LagLensApp(App):
         self.results_text = "Initializing UI...\n"
         self.latest_latencies = {}
 
-        # Initial map update after a short delay to ensure widget sizes are initialized
         self.set_timer(0.5, self.update_world_map)
 
         asyncio.create_task(self.periodic_ping_updates())
@@ -146,26 +155,28 @@ class LagLensApp(App):
 
         for server, result in zip(self.servers, results, strict=False):
             server_ip = server["ip"]
+            server_name = server["name"]
 
             if isinstance(result, Exception):
                 self.latency_history.add_measurement(server_ip, None, current_time)
-                results_text.append(f"{server['name']:<25}: Error\n", style="bold red")
+                # Use fixed width for server name and right-align the status
+                results_text.append(f"{server_name:<20} : ", style="white")
+                results_text.append("Error\n", style="bold red")
             else:
                 latency, indicator_text = result
                 self.latest_latencies[server_ip] = latency
                 self.latency_history.add_measurement(server_ip, latency, current_time)
 
-                results_text.append(f"{server['name']:<25}: ")
+                # Format: server_name (left-aligned, 20 chars) : indicator + latency
+                results_text.append(f"{server_name:<20} : ", style="white")
                 results_text.append(indicator_text)
                 results_text.append("\n")
 
-        # Update the UI
         ping_results_widget = self.query_one("#ping-results", Static)
         ping_results_widget.update(
             Panel(results_text, title="Latency Results", border_style="dim white")
         )
 
-        # Update individual server containers
         self.update_server_containers()
         self.update_world_map()
 
@@ -174,34 +185,36 @@ class LagLensApp(App):
         for server in self.servers:
             server_ip = server["ip"]
             server_name = server["name"]
-            
-            # Get server statistics
-            server_stats = self.latency_history.get_statistics(server_ip, window_minutes=60)
-            
-            # Create stats text for this server
+
+            server_stats = self.latency_history.get_statistics(
+                server_ip, window_minutes=60
+            )
+
             stats_text = Text(f"{server_name}\n", style="bold white")
-            
+
             if server_stats["avg"] is not None:
                 stats_text.append(f"Avg: {server_stats['avg']:.1f}ms\n", style="white")
-                stats_text.append(f"Min: {server_stats['min']:.1f}ms\n", style="green")
-                stats_text.append(f"Max: {server_stats['max']:.1f}ms\n", style="red")
-                stats_text.append(f"Jitter: {server_stats['jitter']:.1f}ms\n", style="yellow")
-                stats_text.append(f"Loss: {server_stats['packet_loss']:.1f}%", style="magenta")
-                
-                # Update sparkline
+                stats_text.append(f"Min: {server_stats['min']:.1f}ms\n", style="white")
+                stats_text.append(f"Max: {server_stats['max']:.1f}ms\n", style="white")
+                stats_text.append(
+                    f"Jitter: {server_stats['jitter']:.1f}ms\n", style="yellow"
+                )
+                stats_text.append(
+                    f"Loss: {server_stats['packet_loss']:.1f}%", style="magenta"
+                )
+
                 self.update_sparkline_for_server(server_ip)
             else:
                 stats_text.append("No data available", style="dim")
-            
-            # Update the stats widget for this server
+
             try:
                 stats_widget_id = f"stats-{server_ip.replace('.', '-')}"
                 stats_widget = self.query_one(f"#{stats_widget_id}", Static)
                 stats_widget.update(
                     Panel(
-                        stats_text, 
-                        title=f"{server_name[:15]} Stats", 
-                        border_style="dim blue"
+                        stats_text,
+                        title=f"{server_name[:15]} Stats",
+                        border_style="dim white",
                     )
                 )
             except Exception as e:
@@ -210,15 +223,17 @@ class LagLensApp(App):
     def update_sparkline_for_server(self, server_ip: str):
         """Update the sparkline widget for a specific server."""
         try:
-            sparkline_data = self.latency_history.get_sparkline_data(server_ip, minutes=30)
-            
+            sparkline_data = self.latency_history.get_sparkline_data(
+                server_ip, minutes=30
+            )
+
             if server_ip in self.sparklines:
                 self.sparklines[server_ip].data = sparkline_data
-                
+
                 widget_id = f"sparkline-{server_ip.replace('.', '-')}"
                 sparkline_widget = self.query_one(f"#{widget_id}", Sparkline)
                 self.sparklines[server_ip].update_sparkline_widget(sparkline_widget)
-            
+
         except Exception as e:
             self.log(f"Failed to update sparkline for {server_ip}: {e}")
 
@@ -247,11 +262,14 @@ class LagLensApp(App):
             all_stats[server["name"]] = {
                 "ip": server_ip,
                 "statistics": self.latency_history.get_statistics(server_ip),
-                "recent_measurements": self.latency_history._get_recent_data(server_ip, 60)
+                "recent_measurements": self.latency_history._get_recent_data(
+                    server_ip, 60
+                ),
             }
 
         import json
-        with open(filename, 'w') as f:
+
+        with open(filename, "w") as f:
             json.dump(all_stats, f, indent=2, default=str)
 
         self.notify(f"Statistics saved to {filename}")

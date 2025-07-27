@@ -1,9 +1,9 @@
 from collections import defaultdict
+from collections.abc import Sequence
 from datetime import datetime, timedelta
-from typing import Sequence
 
-from textual.widgets import Sparkline
 from textual.color import Color
+from textual.widgets import Sparkline
 
 
 class LatencyHistory:
@@ -43,16 +43,16 @@ class LatencyHistory:
         """Get latency data formatted for Sparkline widget."""
         recent_data = self._get_recent_data(server_ip, minutes)
         latencies = [m["latency"] for m in recent_data if m["latency"] is not None]
-        
+
         if not latencies:
             return [0.0]
-        
+
         # Limit to reasonable number of points for display
         max_points = 50
         if len(latencies) > max_points:
             step = len(latencies) // max_points
             latencies = latencies[::step]
-        
+
         return [float(lat) for lat in latencies]
 
     def _get_recent_data(self, server_ip: str, window_minutes: int):
@@ -83,13 +83,13 @@ class LatencyHistory:
 
 class LatencySparkline:
     """Simple class to create and manage Sparkline widgets for latency data."""
-    
+
     def __init__(self, data: Sequence[float] = None):
         """Initialize with optional latency data."""
         self.data = list(data) if data else [0.0]
-    
-    def create_sparkline(self, 
-                        widget_id: str = None, 
+
+    def create_sparkline(self,
+                        widget_id: str = None,
                         widget_classes: str = "latency-sparkline") -> Sparkline:
         """Create a new Sparkline widget with the current data."""
         sparkline = Sparkline(
@@ -97,11 +97,11 @@ class LatencySparkline:
             id=widget_id,
             classes=widget_classes
         )
-        
+
         # Set colors based on average latency using Color objects
         if self.data and len(self.data) > 0:
             avg_latency = sum(self.data) / len(self.data)
-            
+
             if avg_latency < 100:
                 sparkline.min_color = Color.parse("green")
                 sparkline.max_color = Color.parse("lime")
@@ -111,17 +111,17 @@ class LatencySparkline:
             else:
                 sparkline.min_color = Color.parse("red")
                 sparkline.max_color = Color.parse("bright_red")
-        
+
         return sparkline
-    
+
     def update_sparkline_widget(self, sparkline: Sparkline):
         """Update an existing Sparkline widget with current data."""
         sparkline.data = self.data
-        
+
         # Update colors based on current average using Color objects
         if self.data and len(self.data) > 0:
             avg_latency = sum(self.data) / len(self.data)
-            
+
             if avg_latency < 100:
                 sparkline.min_color = Color.parse("green")
                 sparkline.max_color = Color.parse("lime")
@@ -131,10 +131,10 @@ class LatencySparkline:
             else:
                 sparkline.min_color = Color.parse("red")
                 sparkline.max_color = Color.parse("bright_red")
-    
+
     @staticmethod
-    def from_latency_history(latency_history: LatencyHistory, 
-                           server_ip: str, 
+    def from_latency_history(latency_history: LatencyHistory,
+                           server_ip: str,
                            minutes: int = 30) -> 'LatencySparkline':
         """Create a LatencySparkline from LatencyHistory data."""
         data = latency_history.get_sparkline_data(server_ip, minutes)
