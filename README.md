@@ -6,7 +6,7 @@ Also i just wanted to make an ASCII map in the terminal.
 
 ## Screenshot
 
-![LagLens in Action](assets/screenshot.png)
+![LagLens in Action](assets/Screenshot.png)
 
 ## Features
 
