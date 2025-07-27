@@ -1,16 +1,17 @@
 import asyncio
-import time
+import json
 from datetime import datetime
-from statistics import LatencyHistory, LatencySparkline
+from statistics import LatencyHistory
 
 from config.config import BINDINGS
 from config.servers import AWS_SERVERS
 from ping import get_latency_indicator, ping_server
-from rich.panel import Panel
-from rich.text import Text
+from server_manager import ServerManager
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, ScrollableContainer, Vertical
-from textual.widgets import Button, Footer, Header, Input, Label, Sparkline, Static
+from textual.widgets import Button, Footer, Header, Input, Static
+from ui.forms import AddServerForm
+from ui_updater import UIUpdater
 from world_map import WorldMap
 
 
@@ -37,6 +38,10 @@ class LagLensApp(App):
         self.latency_history = LatencyHistory()
         self.sparklines = {}
         self.runtime_servers = list(AWS_SERVERS)
+        
+        # Initialize managers
+        self.server_manager = ServerManager(self)
+        self.ui_updater = UIUpdater(self)
 
     @property
     def servers(self):
@@ -47,7 +52,7 @@ class LagLensApp(App):
         """Create child widgets for the app."""
         ascii_map = Static(id="ascii-map", classes="map-panel")
 
-        add_server_form = self._create_add_server_form()
+        add_server_form = AddServerForm.create()
 
         yield Header()
         yield Horizontal(
@@ -78,47 +83,9 @@ class LagLensApp(App):
 
     def action_clear_form(self) -> None:
         """Clear the add server form."""
-        self.clear_form()
+        self.server_manager.clear_form()
 
-    def _create_add_server_form(self) -> Vertical:
-        """Create the add server form for the bottom center panel."""
-        return Vertical(
-            ScrollableContainer(
-                Horizontal(
-                    Label("Name:", classes="form-label"),
-                    Input(placeholder="e.g., us-west-1", id="server-name", classes="form-input"),
-                    classes="form-row"
-                ),
-                Horizontal(
-                    Label("IP Address:", classes="form-label"),
-                    Input(placeholder="e.g., 192.168.1.1", id="server-ip", classes="form-input"),
-                    classes="form-row"
-                ),
-                Horizontal(
-                    Label("Latitude:", classes="form-label"),
-                    Input(placeholder="e.g., 37.7749", id="server-latitude", classes="form-input"),
-                    classes="form-row"
-                ),
-                Horizontal(
-                    Label("Longitude:", classes="form-label"),
-                    Input(placeholder="e.g., -122.4194", id="server-longitude", classes="form-input"),
-                    classes="form-row"
-                ),
-                Horizontal(
-                    Label("City:", classes="form-label"),
-                    Input(placeholder="e.g., San Francisco, CA", id="server-city", classes="form-input"),
-                    classes="form-row"
-                ),
-                Horizontal(
-                    Button("Add Server", id="add-server-btn", classes="form-button"),
-                    Button("Clear", id="clear-form-btn", classes="form-button"),
-                    classes="form-row"
-                ),
-                classes="add-server-form"
-            ),
-            id="bottom-center",
-            classes="bottom-center-panel"
-        )
+
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press events."""
@@ -130,54 +97,19 @@ class LagLensApp(App):
     def add_new_server(self) -> None:
         """Add a new server from form data."""
         try:
-            name = self.query_one("#server-name", Input).value.strip()
-            ip = self.query_one("#server-ip", Input).value.strip()
-            latitude_str = self.query_one("#server-latitude", Input).value.strip()
-            longitude_str = self.query_one("#server-longitude", Input).value.strip()
-            city = self.query_one("#server-city", Input).value.strip()
-
-            if not all([name, ip, latitude_str, longitude_str]):
-                self.notify("Please fill in all required fields (Name, IP, Latitude, Longitude)", severity="error")
+            name, ip, latitude_str, longitude_str, city = self.server_manager.get_form_data()
+            
+            is_valid, error_msg, latitude, longitude = self.server_manager.validate_server_data(
+                name, ip, latitude_str, longitude_str
+            )
+            
+            if not is_valid:
+                self.notify(error_msg, severity="error")
                 return
-
-            try:
-                latitude = float(latitude_str)
-                longitude = float(longitude_str)
-
-                if not (-90 <= latitude <= 90):
-                    self.notify("Latitude must be between -90 and 90", severity="error")
-                    return
-                if not (-180 <= longitude <= 180):
-                    self.notify("Longitude must be between -180 and 180", severity="error")
-                    return
-
-            except ValueError:
-                self.notify("Latitude and Longitude must be valid numbers", severity="error")
-                return
-
-            if any(server['ip'] == ip for server in self.runtime_servers):
-                self.notify(f"Server with IP {ip} already exists", severity="error")
-                return
-
-            if any(server['name'] == name for server in self.runtime_servers):
-                self.notify(f"Server with name '{name}' already exists", severity="error")
-                return
-
-            new_server = {
-                "name": name,
-                "ip": ip,
-                "latitude": latitude,
-                "longitude": longitude,
-                "city": city if city else "Unknown Location"
-            }
-
-            self.runtime_servers.append(new_server)
-
-            self.latency_history.history[ip] = []
-
-            self._refresh_server_containers()
-
-            self.clear_form()
+            
+            new_server = self.server_manager.add_server(name, ip, latitude, longitude, city)
+            self.server_manager.add_new_server_container(new_server)
+            self.server_manager.clear_form()
 
             self.notify(f"Successfully added server: {name} ({ip})", severity="information")
             self.log(f"Added new server: {new_server}")
@@ -188,77 +120,12 @@ class LagLensApp(App):
 
     def clear_form(self) -> None:
         """Clear all form inputs."""
-        self.query_one("#server-name", Input).value = ""
-        self.query_one("#server-ip", Input).value = ""
-        self.query_one("#server-latitude", Input).value = ""
-        self.query_one("#server-longitude", Input).value = ""
-        self.query_one("#server-city", Input).value = ""
-
-    def _refresh_server_containers(self) -> None:
-        """Refresh the server containers to include newly added servers."""
-        try:
-            servers_container = self.query_one("#servers-container", ScrollableContainer)
-
-            new_server = self.runtime_servers[-1]
-            server_ip = new_server["ip"]
-            server_name = new_server["name"]
-
-            if server_ip not in self.sparklines:
-                latency_sparkline = LatencySparkline([0.0])
-                self.sparklines[server_ip] = latency_sparkline
-
-                sparkline_widget_id = f"sparkline-{server_ip.replace('.', '-')}"
-                sparkline_widget = latency_sparkline.create_sparkline(
-                    widget_id=sparkline_widget_id, widget_classes="server-sparkline"
-                )
-
-                server_container = Vertical(
-                    Static(
-                        id=f"stats-{server_ip.replace('.', '-')}", classes="server-stats"
-                    ),
-                    sparkline_widget,
-                    id=f"server-container-{server_ip.replace('.', '-')}",
-                    classes="individual-server-container",
-                )
-
-                servers_container.mount(server_container)
-
-        except Exception as e:
-            self.log(f"Error refreshing server containers: {e}")
+        self.server_manager.clear_form()
 
     def _create_server_containers(self):
         """Create individual server containers with stats and sparklines."""
-        server_containers = []
-
-        for server in self.runtime_servers:
-            server_ip = server["ip"]
-            server_name = server["name"]
-
-            # Only create new sparkline if it doesn't exist
-            if server_ip not in self.sparklines:
-                latency_sparkline = LatencySparkline([0.0])
-                self.sparklines[server_ip] = latency_sparkline
-            else:
-                # Use existing sparkline data
-                latency_sparkline = self.sparklines[server_ip]
-
-            sparkline_widget_id = f"sparkline-{server_ip.replace('.', '-')}"
-            sparkline_widget = latency_sparkline.create_sparkline(
-                widget_id=sparkline_widget_id, widget_classes="server-sparkline"
-            )
-
-            server_container = Vertical(
-                Static(
-                    id=f"stats-{server_ip.replace('.', '-')}", classes="server-stats"
-                ),
-                sparkline_widget,
-                id=f"server-container-{server_ip.replace('.', '-')}",
-                classes="individual-server-container",
-            )
-
-            server_containers.append(server_container)
-
-        return server_containers
+        return [self.server_manager.create_server_container(server) 
+                for server in self.runtime_servers]
 
     def on_mount(self) -> None:
         """Call when the app is mounted."""
@@ -271,145 +138,33 @@ class LagLensApp(App):
 
     def update_world_map(self) -> None:
         """Update the world map dynamically based on widget size."""
-        map_widget = self.query_one("#ascii-map", Static)
-        width = map_widget.size.width
-        height = map_widget.size.height
-
-        if width > 0 and height > 0:
-            servers_with_indicators = []
-            for server in self.servers:
-                indicator = self.get_server_indicator(server)
-                servers_with_indicators.append(
-                    {
-                        "latitude": server["latitude"],
-                        "longitude": server["longitude"],
-                        "indicator": indicator,
-                    }
-                )
-
-            map_text = self.world_map.draw(
-                columns=width, lines=height, servers=servers_with_indicators
-            )
-            map_widget.update(map_text)
-        else:
-            self.log("Map widget size is not initialized yet.")
+        self.ui_updater.update_world_map()
 
     def get_server_indicator(self, server) -> str:
         """Get the indicator for a server based on its current latency."""
-        latency = self.latest_latencies.get(server["ip"])
-        if latency is not None:
-            if latency < 100:
-                return "🟢"
-            elif 100 <= latency <= 300:
-                return "🟡"
-            else:
-                return "🔴"
-        return "●"
+        return self.ui_updater.get_server_indicator(server)
 
     async def periodic_ping_updates(self) -> None:
         """Run update_ping_results every 5 seconds."""
         while True:
-            await self.update_ping_results()
+            await self.ui_updater.update_ping_results()
             await asyncio.sleep(5)
+
+    async def gather_ping_results(self, tasks):
+        """Gather ping results from async tasks."""
+        return await asyncio.gather(*tasks, return_exceptions=True)
 
     async def update_ping_results(self) -> None:
         """Perform pings asynchronously and update the TUI with results."""
-        current_time = datetime.now()
-
-        results_text = Text(
-            f"--- Last Update: {time.strftime('%H:%M:%S')} ---\n\n", style="bold white"
-        )
-
-        tasks = [self.ping_server_async(server["ip"]) for server in self.servers]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        for server, result in zip(self.servers, results, strict=False):
-            server_ip = server["ip"]
-            server_name = server["name"]
-
-            if isinstance(result, Exception):
-                self.latency_history.add_measurement(server_ip, None, current_time)
-                # Use fixed width for server name and right-align the status
-                results_text.append(f"{server_name:<20} : ", style="white")
-                results_text.append("Error\n", style="bold red")
-            else:
-                latency, indicator_text = result
-                self.latest_latencies[server_ip] = latency
-                self.latency_history.add_measurement(server_ip, latency, current_time)
-
-                # Format: server_name (left-aligned, 20 chars) : indicator + latency
-                results_text.append(f"{server_name:<20} : ", style="white")
-                results_text.append(indicator_text)
-                results_text.append("\n")
-
-        ping_results_widget = self.query_one("#ping-results", Static)
-        ping_results_widget.update(
-            Panel(results_text, title="Latency Results", border_style="dim white")
-        )
-
-        self.update_server_containers()
-        self.update_world_map()
+        await self.ui_updater.update_ping_results()
 
     def update_server_containers(self) -> None:
         """Update each server's individual container with stats and sparkline."""
-        for server in self.servers:
-            server_ip = server["ip"]
-            server_name = server["name"]
-
-            server_stats = self.latency_history.get_statistics(
-                server_ip, window_minutes=60
-            )
-
-            stats_text = Text(f"{server_name}\n", style="bold white")
-
-            if server_stats["avg"] is not None:
-                stats_text.append(f"Avg: {server_stats['avg']:.1f}ms\n", style="white")
-                stats_text.append(f"Min: {server_stats['min']:.1f}ms\n", style="white")
-                stats_text.append(f"Max: {server_stats['max']:.1f}ms\n", style="white")
-                stats_text.append(
-                    f"Jitter: {server_stats['jitter']:.1f}ms\n", style="yellow"
-                )
-                stats_text.append(
-                    f"Loss: {server_stats['packet_loss']:.1f}%", style="magenta"
-                )
-
-                self.update_sparkline_for_server(server_ip)
-            else:
-                stats_text.append("No data available", style="dim")
-
-            try:
-                stats_widget_id = f"stats-{server_ip.replace('.', '-')}"
-                stats_widget = self.query_one(f"#{stats_widget_id}", Static)
-                stats_widget.update(
-                    Panel(
-                        stats_text,
-                        title=f"{server_name[:15]} Stats",
-                        border_style="dim white",
-                    )
-                )
-            except Exception as e:
-                self.log(f"Failed to update stats for {server_ip}: {e}")
+        self.ui_updater.update_server_containers()
 
     def update_sparkline_for_server(self, server_ip: str):
         """Update the sparkline widget for a specific server."""
-        try:
-            sparkline_data = self.latency_history.get_sparkline_data(
-                server_ip, minutes=30
-            )
-
-            # Check if sparkline exists, if not skip (new server with no data yet)
-            if server_ip in self.sparklines:
-                self.sparklines[server_ip].data = sparkline_data
-
-                widget_id = f"sparkline-{server_ip.replace('.', '-')}"
-                try:
-                    sparkline_widget = self.query_one(f"#{widget_id}", Sparkline)
-                    self.sparklines[server_ip].update_sparkline_widget(sparkline_widget)
-                except Exception as widget_error:
-                    self.log(f"Sparkline widget not found for {server_ip}: {widget_error}")
-
-        except Exception as e:
-            self.log(f"Failed to update sparkline for {server_ip}: {e}")
+        self.ui_updater.update_sparkline_for_server(server_ip)
 
     async def ping_server_async(self, server: str) -> tuple:
         """Ping a server asynchronously and return latency and indicator text."""
@@ -440,8 +195,6 @@ class LagLensApp(App):
                     server_ip, 60
                 ),
             }
-
-        import json
 
         with open(filename, "w") as f:
             json.dump(all_stats, f, indent=2, default=str)
