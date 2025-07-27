@@ -131,36 +131,45 @@ ScrollableContainer {
 
 .form-row {
     layout: horizontal;
-    height: auto;
+    height: 3;
     align: left middle;
-    margin: 0 0 1 0;
+    margin: 0 0 0 0;
 }
 
 .form-label {
     width: 12;
+    height: 3;
     text-align: right;
+    content-align: right middle;
     margin: 0 1 0 0;
 }
 
 .form-input {
-    width: 1fr;
+    width: 20;
+    height: 3;
     margin: 0 0 0 1;
 }
 
 .form-button {
-    width: auto;
-    margin: 1 0 0 0;
+    width: 10;
+    height: 3;
+    margin: 0 1 0 0;
 }
 
 /* Input field styling */
 Input {
-    background: #1a1a1a;
-    color: white;
+    background: #2a2a2a;
+    color: #ffffff;
     border: solid #404040;
+    min-height: 1;
+    max-height: 3;
+    padding: 0 1;
 }
 
 Input:focus {
+    background: #333333;
     border: solid #606060;
+    color: #ffffff;
 }
 
 /* Button styling */
@@ -168,14 +177,21 @@ Button {
     background: #404040;
     color: white;
     border: solid #606060;
-    margin: 0 1 0 0;
+    min-height: 1;
+    max-height: 3;
 }
 
-Button:hover {
-    background: #505050;
+/* Label styling */
+Label {
+    height: 3;
+    content-align: right middle;
 }
 
-Button:focus {
-    background: #606060;
-    border: solid #808080;
+/* Bottom center panel adjustments */
+.bottom-center-panel {
+    height: 30%;
+    width: 1fr;
+    background: #252525;
+    border: solid #404040;
+    padding: 0;
 }

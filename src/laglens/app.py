@@ -3,15 +3,14 @@ import time
 from datetime import datetime
 from statistics import LatencyHistory, LatencySparkline
 
-from config.servers import AWS_SERVERS
 from config.config import BINDINGS
+from config.servers import AWS_SERVERS
 from ping import get_latency_indicator, ping_server
 from rich.panel import Panel
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, ScrollableContainer, Vertical
-from textual.widgets import Footer, Header, Sparkline, Static, Input, Button, Label
-from textual.message import Message
+from textual.widgets import Button, Footer, Header, Input, Label, Sparkline, Static
 from world_map import WorldMap
 
 
@@ -31,6 +30,7 @@ class LagLensApp(App):
             world_map (WorldMap): Instance for displaying the world map.
             latency_history (LatencyHistory): Tracks latency data over time.
             sparklines (dict): Stores sparkline instances for each server.
+
         """
         super().__init__(**kwargs)
         self.world_map = WorldMap(data_file="data/world_countries.json")
@@ -38,7 +38,7 @@ class LagLensApp(App):
         self.sparklines = {}
         self.runtime_servers = list(AWS_SERVERS)
 
-    @property 
+    @property
     def servers(self):
         """Return current runtime servers."""
         return self.runtime_servers
@@ -46,7 +46,7 @@ class LagLensApp(App):
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         ascii_map = Static(id="ascii-map", classes="map-panel")
-        
+
         add_server_form = self._create_add_server_form()
 
         yield Header()
@@ -143,14 +143,14 @@ class LagLensApp(App):
             try:
                 latitude = float(latitude_str)
                 longitude = float(longitude_str)
-                
+
                 if not (-90 <= latitude <= 90):
                     self.notify("Latitude must be between -90 and 90", severity="error")
                     return
                 if not (-180 <= longitude <= 180):
                     self.notify("Longitude must be between -180 and 180", severity="error")
                     return
-                    
+
             except ValueError:
                 self.notify("Latitude and Longitude must be valid numbers", severity="error")
                 return
@@ -168,7 +168,7 @@ class LagLensApp(App):
                 "ip": ip,
                 "latitude": latitude,
                 "longitude": longitude,
-                "city": city if city else f"Unknown Location"
+                "city": city if city else "Unknown Location"
             }
 
             self.runtime_servers.append(new_server)
@@ -198,15 +198,15 @@ class LagLensApp(App):
         """Refresh the server containers to include newly added servers."""
         try:
             servers_container = self.query_one("#servers-container", ScrollableContainer)
-            
+
             new_server = self.runtime_servers[-1]
             server_ip = new_server["ip"]
             server_name = new_server["name"]
-            
+
             if server_ip not in self.sparklines:
                 latency_sparkline = LatencySparkline([0.0])
                 self.sparklines[server_ip] = latency_sparkline
-                
+
                 sparkline_widget_id = f"sparkline-{server_ip.replace('.', '-')}"
                 sparkline_widget = latency_sparkline.create_sparkline(
                     widget_id=sparkline_widget_id, widget_classes="server-sparkline"
@@ -220,9 +220,9 @@ class LagLensApp(App):
                     id=f"server-container-{server_ip.replace('.', '-')}",
                     classes="individual-server-container",
                 )
-                
+
                 servers_container.mount(server_container)
-                
+
         except Exception as e:
             self.log(f"Error refreshing server containers: {e}")
 
