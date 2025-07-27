@@ -10,7 +10,8 @@ from rich.panel import Panel
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, ScrollableContainer, Vertical
-from textual.widgets import Footer, Header, Sparkline, Static
+from textual.widgets import Footer, Header, Sparkline, Static, Input, Button, Label
+from textual.message import Message
 from world_map import WorldMap
 
 
@@ -35,17 +36,24 @@ class LagLensApp(App):
         self.world_map = WorldMap(data_file="data/world_countries.json")
         self.latency_history = LatencyHistory()
         self.sparklines = {}
+        self.runtime_servers = list(AWS_SERVERS)
+
+    @property 
+    def servers(self):
+        """Return current runtime servers."""
+        return self.runtime_servers
 
     def compose(self) -> ComposeResult:
         """Create child widgets for the app."""
         ascii_map = Static(id="ascii-map", classes="map-panel")
-        bottom_center = Static(id="bottom-center", classes="bottom-center-panel")
+        
+        add_server_form = self._create_add_server_form()
 
         yield Header()
         yield Horizontal(
             Vertical(
-                ascii_map,          # 70% of center panel
-                bottom_center,      # 30% of center panel
+                ascii_map,
+                add_server_form,
                 classes="center-panel"
             ),
             ScrollableContainer(
@@ -60,16 +68,179 @@ class LagLensApp(App):
         )
         yield Footer(show_command_palette=False)
 
+    def action_focus_add_server(self) -> None:
+        """Focus on the add server form."""
+        try:
+            name_input = self.query_one("#server-name", Input)
+            name_input.focus()
+        except Exception:
+            pass
+
+    def action_clear_form(self) -> None:
+        """Clear the add server form."""
+        self.clear_form()
+
+    def _create_add_server_form(self) -> Vertical:
+        """Create the add server form for the bottom center panel."""
+        return Vertical(
+            ScrollableContainer(
+                Horizontal(
+                    Label("Name:", classes="form-label"),
+                    Input(placeholder="e.g., us-west-1", id="server-name", classes="form-input"),
+                    classes="form-row"
+                ),
+                Horizontal(
+                    Label("IP Address:", classes="form-label"),
+                    Input(placeholder="e.g., 192.168.1.1", id="server-ip", classes="form-input"),
+                    classes="form-row"
+                ),
+                Horizontal(
+                    Label("Latitude:", classes="form-label"),
+                    Input(placeholder="e.g., 37.7749", id="server-latitude", classes="form-input"),
+                    classes="form-row"
+                ),
+                Horizontal(
+                    Label("Longitude:", classes="form-label"),
+                    Input(placeholder="e.g., -122.4194", id="server-longitude", classes="form-input"),
+                    classes="form-row"
+                ),
+                Horizontal(
+                    Label("City:", classes="form-label"),
+                    Input(placeholder="e.g., San Francisco, CA", id="server-city", classes="form-input"),
+                    classes="form-row"
+                ),
+                Horizontal(
+                    Button("Add Server", id="add-server-btn", classes="form-button"),
+                    Button("Clear", id="clear-form-btn", classes="form-button"),
+                    classes="form-row"
+                ),
+                classes="add-server-form"
+            ),
+            id="bottom-center",
+            classes="bottom-center-panel"
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press events."""
+        if event.button.id == "add-server-btn":
+            self.add_new_server()
+        elif event.button.id == "clear-form-btn":
+            self.clear_form()
+
+    def add_new_server(self) -> None:
+        """Add a new server from form data."""
+        try:
+            name = self.query_one("#server-name", Input).value.strip()
+            ip = self.query_one("#server-ip", Input).value.strip()
+            latitude_str = self.query_one("#server-latitude", Input).value.strip()
+            longitude_str = self.query_one("#server-longitude", Input).value.strip()
+            city = self.query_one("#server-city", Input).value.strip()
+
+            if not all([name, ip, latitude_str, longitude_str]):
+                self.notify("Please fill in all required fields (Name, IP, Latitude, Longitude)", severity="error")
+                return
+
+            try:
+                latitude = float(latitude_str)
+                longitude = float(longitude_str)
+                
+                if not (-90 <= latitude <= 90):
+                    self.notify("Latitude must be between -90 and 90", severity="error")
+                    return
+                if not (-180 <= longitude <= 180):
+                    self.notify("Longitude must be between -180 and 180", severity="error")
+                    return
+                    
+            except ValueError:
+                self.notify("Latitude and Longitude must be valid numbers", severity="error")
+                return
+
+            if any(server['ip'] == ip for server in self.runtime_servers):
+                self.notify(f"Server with IP {ip} already exists", severity="error")
+                return
+
+            if any(server['name'] == name for server in self.runtime_servers):
+                self.notify(f"Server with name '{name}' already exists", severity="error")
+                return
+
+            new_server = {
+                "name": name,
+                "ip": ip,
+                "latitude": latitude,
+                "longitude": longitude,
+                "city": city if city else f"Unknown Location"
+            }
+
+            self.runtime_servers.append(new_server)
+
+            self.latency_history.history[ip] = []
+
+            self._refresh_server_containers()
+
+            self.clear_form()
+
+            self.notify(f"Successfully added server: {name} ({ip})", severity="information")
+            self.log(f"Added new server: {new_server}")
+
+        except Exception as e:
+            self.notify(f"Error adding server: {str(e)}", severity="error")
+            self.log(f"Error adding server: {e}")
+
+    def clear_form(self) -> None:
+        """Clear all form inputs."""
+        self.query_one("#server-name", Input).value = ""
+        self.query_one("#server-ip", Input).value = ""
+        self.query_one("#server-latitude", Input).value = ""
+        self.query_one("#server-longitude", Input).value = ""
+        self.query_one("#server-city", Input).value = ""
+
+    def _refresh_server_containers(self) -> None:
+        """Refresh the server containers to include newly added servers."""
+        try:
+            servers_container = self.query_one("#servers-container", ScrollableContainer)
+            
+            new_server = self.runtime_servers[-1]
+            server_ip = new_server["ip"]
+            server_name = new_server["name"]
+            
+            if server_ip not in self.sparklines:
+                latency_sparkline = LatencySparkline([0.0])
+                self.sparklines[server_ip] = latency_sparkline
+                
+                sparkline_widget_id = f"sparkline-{server_ip.replace('.', '-')}"
+                sparkline_widget = latency_sparkline.create_sparkline(
+                    widget_id=sparkline_widget_id, widget_classes="server-sparkline"
+                )
+
+                server_container = Vertical(
+                    Static(
+                        id=f"stats-{server_ip.replace('.', '-')}", classes="server-stats"
+                    ),
+                    sparkline_widget,
+                    id=f"server-container-{server_ip.replace('.', '-')}",
+                    classes="individual-server-container",
+                )
+                
+                servers_container.mount(server_container)
+                
+        except Exception as e:
+            self.log(f"Error refreshing server containers: {e}")
+
     def _create_server_containers(self):
         """Create individual server containers with stats and sparklines."""
         server_containers = []
 
-        for server in AWS_SERVERS:
+        for server in self.runtime_servers:
             server_ip = server["ip"]
             server_name = server["name"]
 
-            latency_sparkline = LatencySparkline([0.0])
-            self.sparklines[server_ip] = latency_sparkline
+            # Only create new sparkline if it doesn't exist
+            if server_ip not in self.sparklines:
+                latency_sparkline = LatencySparkline([0.0])
+                self.sparklines[server_ip] = latency_sparkline
+            else:
+                # Use existing sparkline data
+                latency_sparkline = self.sparklines[server_ip]
 
             sparkline_widget_id = f"sparkline-{server_ip.replace('.', '-')}"
             sparkline_widget = latency_sparkline.create_sparkline(
@@ -91,7 +262,6 @@ class LagLensApp(App):
 
     def on_mount(self) -> None:
         """Call when the app is mounted."""
-        self.servers = AWS_SERVERS
         self.results_text = "Initializing UI...\n"
         self.latest_latencies = {}
 
@@ -227,12 +397,16 @@ class LagLensApp(App):
                 server_ip, minutes=30
             )
 
+            # Check if sparkline exists, if not skip (new server with no data yet)
             if server_ip in self.sparklines:
                 self.sparklines[server_ip].data = sparkline_data
 
                 widget_id = f"sparkline-{server_ip.replace('.', '-')}"
-                sparkline_widget = self.query_one(f"#{widget_id}", Sparkline)
-                self.sparklines[server_ip].update_sparkline_widget(sparkline_widget)
+                try:
+                    sparkline_widget = self.query_one(f"#{widget_id}", Sparkline)
+                    self.sparklines[server_ip].update_sparkline_widget(sparkline_widget)
+                except Exception as widget_error:
+                    self.log(f"Sparkline widget not found for {server_ip}: {widget_error}")
 
         except Exception as e:
             self.log(f"Failed to update sparkline for {server_ip}: {e}")
