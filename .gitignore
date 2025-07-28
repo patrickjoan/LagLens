@@ -8,3 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Logs
+*.log
+*.log.*
+
+# Statistics exports
+laglens_stats_*.json

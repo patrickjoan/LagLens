@@ -1,9 +1,10 @@
-"""
-UI update handlers for LagLens application.
+"""UI update handlers for LagLens application.
 """
 
 import time
 from datetime import datetime
+
+from logger import get_logger
 from rich.panel import Panel
 from rich.text import Text
 from textual.widgets import Sparkline, Static
@@ -11,11 +12,12 @@ from textual.widgets import Sparkline, Static
 
 class UIUpdater:
     """Handles UI updates for the LagLens application."""
-    
+
     def __init__(self, app):
         """Initialize with reference to the main app."""
         self.app = app
-    
+        self.logger = get_logger("ui_updater")
+
     def update_world_map(self) -> None:
         """Update the world map dynamically based on widget size."""
         map_widget = self.app.query_one("#ascii-map", Static)
@@ -39,8 +41,8 @@ class UIUpdater:
             )
             map_widget.update(map_text)
         else:
-            self.app.log("Map widget size is not initialized yet.")
-    
+            self.logger.debug("Map widget size is not initialized yet.")
+
     def get_server_indicator(self, server) -> str:
         """Get the indicator for a server based on its current latency."""
         latency = self.app.latest_latencies.get(server["ip"])
@@ -52,7 +54,7 @@ class UIUpdater:
             else:
                 return "🔴"
         return "●"
-    
+
     async def update_ping_results(self) -> None:
         """Perform pings asynchronously and update the TUI with results."""
         current_time = datetime.now()
@@ -88,7 +90,7 @@ class UIUpdater:
 
         self.update_server_containers()
         self.update_world_map()
-    
+
     def update_server_containers(self) -> None:
         """Update each server's individual container with stats and sparkline."""
         for server in self.app.servers:
@@ -127,8 +129,9 @@ class UIUpdater:
                     )
                 )
             except Exception as e:
+                self.logger.warning(f"Failed to update stats for {server_ip}: {e}")
                 self.app.log(f"Failed to update stats for {server_ip}: {e}")
-    
+
     def update_sparkline_for_server(self, server_ip: str):
         """Update the sparkline widget for a specific server."""
         try:
@@ -145,7 +148,9 @@ class UIUpdater:
                     sparkline_widget = self.app.query_one(f"#{widget_id}", Sparkline)
                     self.app.sparklines[server_ip].update_sparkline_widget(sparkline_widget)
                 except Exception as widget_error:
+                    self.logger.debug(f"Sparkline widget not found for {server_ip}: {widget_error}")
                     self.app.log(f"Sparkline widget not found for {server_ip}: {widget_error}")
 
         except Exception as e:
+            self.logger.warning(f"Failed to update sparkline for {server_ip}: {e}")
             self.app.log(f"Failed to update sparkline for {server_ip}: {e}")

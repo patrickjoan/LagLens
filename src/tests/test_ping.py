@@ -1,8 +1,8 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 from rich.text import Text
 
-from laglens.ping import ping_server, get_latency_indicator
+from laglens.ping import get_latency_indicator, ping_server
 
 
 def test_ping_server_success():

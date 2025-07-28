@@ -1,5 +1,8 @@
+from logger import get_logger
 from ping3 import errors, ping
 from rich.text import Text
+
+logger = get_logger("ping")
 
 
 def ping_server(host: str, timeout: int = 5) -> int | None:
@@ -20,10 +23,10 @@ def ping_server(host: str, timeout: int = 5) -> int | None:
         else:
             return None
     except errors.PingError as e:
-        print(f"Error pinging {host}: {e}")
+        logger.warning(f"Error pinging {host}: {e}")
         return None
     except Exception as e:
-        print(f"An unexpected error occurred while pinging {host}: {e}")
+        logger.error(f"An unexpected error occurred while pinging {host}: {e}")
         return None
 
 

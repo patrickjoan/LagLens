@@ -1,3 +1,2 @@
-"""
-Empty __init__.py file for ui package.
+"""Empty __init__.py file for ui package.
 """

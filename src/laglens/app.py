@@ -5,6 +5,7 @@ from statistics import LatencyHistory
 
 from config.config import BINDINGS
 from config.servers import AWS_SERVERS
+from logger import get_logger
 from ping import get_latency_indicator, ping_server
 from server_manager import ServerManager
 from textual.app import App, ComposeResult
@@ -34,11 +35,12 @@ class LagLensApp(App):
 
         """
         super().__init__(**kwargs)
+        self.logger = get_logger("app")
         self.world_map = WorldMap(data_file="data/world_countries.json")
         self.latency_history = LatencyHistory()
         self.sparklines = {}
         self.runtime_servers = list(AWS_SERVERS)
-        
+
         # Initialize managers
         self.server_manager = ServerManager(self)
         self.ui_updater = UIUpdater(self)
@@ -98,25 +100,25 @@ class LagLensApp(App):
         """Add a new server from form data."""
         try:
             name, ip, latitude_str, longitude_str, city = self.server_manager.get_form_data()
-            
+
             is_valid, error_msg, latitude, longitude = self.server_manager.validate_server_data(
                 name, ip, latitude_str, longitude_str
             )
-            
+
             if not is_valid:
                 self.notify(error_msg, severity="error")
                 return
-            
+
             new_server = self.server_manager.add_server(name, ip, latitude, longitude, city)
             self.server_manager.add_new_server_container(new_server)
             self.server_manager.clear_form()
 
             self.notify(f"Successfully added server: {name} ({ip})", severity="information")
-            self.log(f"Added new server: {new_server}")
+            self.logger.info(f"Added new server: {new_server}")
 
         except Exception as e:
             self.notify(f"Error adding server: {str(e)}", severity="error")
-            self.log(f"Error adding server: {e}")
+            self.logger.error(f"Error adding server: {e}", exc_info=True)
 
     def clear_form(self) -> None:
         """Clear all form inputs."""
@@ -124,7 +126,7 @@ class LagLensApp(App):
 
     def _create_server_containers(self):
         """Create individual server containers with stats and sparklines."""
-        return [self.server_manager.create_server_container(server) 
+        return [self.server_manager.create_server_container(server)
                 for server in self.runtime_servers]
 
     def on_mount(self) -> None:
@@ -173,11 +175,12 @@ class LagLensApp(App):
             indicator_text = get_latency_indicator(latency)
             return latency, indicator_text
         except Exception as e:
-            self.log(f"Error pinging server {server}: {e}")
+            self.logger.error(f"Error pinging server {server}: {e}")
             raise
 
     async def action_quit(self) -> None:
         """Quit the application."""
+        self.logger.info("Application quit requested")
         self.exit()
 
     def action_save_statistics(self) -> None:
@@ -196,7 +199,12 @@ class LagLensApp(App):
                 ),
             }
 
-        with open(filename, "w") as f:
-            json.dump(all_stats, f, indent=2, default=str)
+        try:
+            with open(filename, "w") as f:
+                json.dump(all_stats, f, indent=2, default=str)
 
-        self.notify(f"Statistics saved to {filename}")
+            self.logger.info(f"Statistics saved to {filename}")
+            self.notify(f"Statistics saved to {filename}")
+        except Exception as e:
+            self.logger.error(f"Failed to save statistics: {e}")
+            self.notify(f"Failed to save statistics: {e}", severity="error")

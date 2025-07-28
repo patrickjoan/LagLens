@@ -1,5 +1,4 @@
-"""
-Form components for LagLens application.
+"""Form components for LagLens application.
 """
 
 from textual.containers import Horizontal, ScrollableContainer, Vertical
@@ -8,7 +7,7 @@ from textual.widgets import Button, Input, Label
 
 class AddServerForm:
     """Form for adding new servers to the monitoring list."""
-    
+
     @staticmethod
     def create() -> Vertical:
         """Create the add server form for the bottom center panel."""
