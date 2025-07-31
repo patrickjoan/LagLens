@@ -42,6 +42,9 @@ class WorldMap:
         self.xmin, self.ymin = self.transformer.transform(-180, -75)
         self.xmax, self.ymax = self.transformer.transform(180, 85)
 
+        # Cache for land/water grid
+        self._land_grid_cache = {}
+
     def _load_geometries(self) -> list:
         """Load geometries from the GeoJSON file."""
         with open(self.data_file) as f:
@@ -104,17 +107,24 @@ class WorldMap:
         pixel_width = (self.xmax - self.xmin) / columns
         pixel_height = (self.ymax - self.ymin) / lines
 
-        # Precompute land/water grid
-        land_grid = [
-            [
-                self._is_land_cell(
-                    self.xmin + (col + 0.5) * pixel_width,
-                    self.ymax - (line + 0.5) * pixel_height,
-                )
-                for col in range(columns)
-            ]
-            for line in range(lines)
-        ]
+        # Precompute land/water grid with caching
+        cache_key = (columns, lines)
+        if cache_key in self._land_grid_cache:
+            land_grid = self._land_grid_cache[cache_key]
+        else:
+
+            def land_grid_gen():
+                xmin, ymax = self.xmin, self.ymax
+                for line in range(lines):
+                    y = ymax - (line + 0.5) * pixel_height
+                    row = []
+                    for col in range(columns):
+                        x = xmin + (col + 0.5) * pixel_width
+                        row.append(self._is_land_cell(x, y))
+                    yield row
+
+            land_grid = list(land_grid_gen())
+            self._land_grid_cache[cache_key] = land_grid
 
         # Map server positions to indicators
         server_positions = (

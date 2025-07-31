@@ -58,11 +58,7 @@ class LagLensApp(App):
 
         yield Header()
         yield Horizontal(
-            Vertical(
-                ascii_map,
-                add_server_form,
-                classes="center-panel"
-            ),
+            Vertical(ascii_map, add_server_form, classes="center-panel"),
             ScrollableContainer(
                 Static(id="ping-results", classes="right-top-panel"),
                 ScrollableContainer(
@@ -87,8 +83,6 @@ class LagLensApp(App):
         """Clear the add server form."""
         self.server_manager.clear_form()
 
-
-
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press events."""
         if event.button.id == "add-server-btn":
@@ -99,21 +93,29 @@ class LagLensApp(App):
     def add_new_server(self) -> None:
         """Add a new server from form data."""
         try:
-            name, ip, latitude_str, longitude_str, city = self.server_manager.get_form_data()
+            name, ip, latitude_str, longitude_str, city = (
+                self.server_manager.get_form_data()
+            )
 
-            is_valid, error_msg, latitude, longitude = self.server_manager.validate_server_data(
-                name, ip, latitude_str, longitude_str
+            is_valid, error_msg, latitude, longitude = (
+                self.server_manager.validate_server_data(
+                    name, ip, latitude_str, longitude_str
+                )
             )
 
             if not is_valid:
                 self.notify(error_msg, severity="error")
                 return
 
-            new_server = self.server_manager.add_server(name, ip, latitude, longitude, city)
+            new_server = self.server_manager.add_server(
+                name, ip, latitude, longitude, city
+            )
             self.server_manager.add_new_server_container(new_server)
             self.server_manager.clear_form()
 
-            self.notify(f"Successfully added server: {name} ({ip})", severity="information")
+            self.notify(
+                f"Successfully added server: {name} ({ip})", severity="information"
+            )
             self.logger.info(f"Added new server: {new_server}")
 
         except Exception as e:
@@ -126,8 +128,10 @@ class LagLensApp(App):
 
     def _create_server_containers(self):
         """Create individual server containers with stats and sparklines."""
-        return [self.server_manager.create_server_container(server)
-                for server in self.runtime_servers]
+        return [
+            self.server_manager.create_server_container(server)
+            for server in self.runtime_servers
+        ]
 
     def on_mount(self) -> None:
         """Call when the app is mounted."""

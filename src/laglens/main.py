@@ -1,19 +1,24 @@
 import sys
 
 from app import LagLensApp
-from config.config import LOG_FILE, LOG_LEVEL, LOG_FORMAT, LOG_MAX_SIZE, LOG_BACKUP_COUNT
+from config.config import (
+    LOG_BACKUP_COUNT,
+    LOG_FILE,
+    LOG_FORMAT,
+    LOG_LEVEL,
+    LOG_MAX_SIZE,
+)
 from logger import get_logger, setup_logging
 
 
 def main():
     """Main entry point for the LagLens application."""
-    # Setup logging with configuration
     setup_logging(
-        log_level=LOG_LEVEL, 
+        log_level=LOG_LEVEL,
         log_file=LOG_FILE,
         log_format=LOG_FORMAT,
         max_size=LOG_MAX_SIZE,
-        backup_count=LOG_BACKUP_COUNT
+        backup_count=LOG_BACKUP_COUNT,
     )
     logger = get_logger("main")
 
@@ -33,4 +38,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
