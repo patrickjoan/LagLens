@@ -43,7 +43,7 @@ class WorldMap:
         self.xmax, self.ymax = self.transformer.transform(180, 85)
 
         # Cache for land/water grid
-        self._land_grid_cache = {}
+        self._land_grid_cache: dict = {}
 
     def _load_geometries(self) -> list:
         """Load geometries from the GeoJSON file."""

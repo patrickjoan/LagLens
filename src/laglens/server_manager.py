@@ -1,11 +1,10 @@
 """Server management functionality for LagLens application."""
 
-from statistics import LatencySparkline
-
 from textual.containers import ScrollableContainer, Vertical
 from textual.widgets import Input, Static
 
 from laglens.logger import get_logger
+from laglens.latency_stats import LatencySparkline
 
 
 class ServerManager:

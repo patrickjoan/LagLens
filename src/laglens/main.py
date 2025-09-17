@@ -1,14 +1,26 @@
 import sys
+import os
 
-from app import LagLensApp
-from config.config import (
+# Add the src directory to the Python path for direct execution
+if __name__ == "__main__":
+    # Get the directory containing this file (src/laglens/)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Get the src directory (parent of laglens)
+    src_dir = os.path.dirname(current_dir)
+    # Add src to Python path if not already there
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+
+# Now we can use absolute imports that work both ways
+from laglens.config.config import (
     LOG_BACKUP_COUNT,
     LOG_FILE,
     LOG_FORMAT,
     LOG_LEVEL,
     LOG_MAX_SIZE,
 )
-from logger import get_logger, setup_logging
+from laglens.logger import get_logger, setup_logging
+from laglens.app import LagLensApp
 
 
 def main():

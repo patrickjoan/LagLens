@@ -81,12 +81,12 @@ class LatencyHistory:
 class LatencySparkline:
     """Simple class to create and manage Sparkline widgets for latency data."""
 
-    def __init__(self, data: Sequence[float] = None):
+    def __init__(self, data: Sequence[float] | None = None):
         """Initialize with optional latency data."""
         self.data = list(data) if data else [0.0]
 
     def create_sparkline(
-        self, widget_id: str = None, widget_classes: str = "latency-sparkline"
+        self, widget_id: str | None = None, widget_classes: str = "latency-sparkline"
     ) -> Sparkline:
         """Create a new Sparkline widget with the current data."""
         sparkline = Sparkline(data=self.data, id=widget_id, classes=widget_classes)

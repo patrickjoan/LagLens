@@ -1,7 +1,6 @@
 import asyncio
 import json
 from datetime import datetime
-from statistics import LatencyHistory
 
 from config.config import BINDINGS
 from config.servers import AWS_SERVERS
@@ -15,6 +14,7 @@ from ui_updater import UIUpdater
 from world_map import WorldMap
 
 from laglens.logger import get_logger
+from laglens.latency_stats import LatencyHistory
 
 
 class LagLensApp(App):
@@ -137,7 +137,7 @@ class LagLensApp(App):
     def on_mount(self) -> None:
         """Call when the app is mounted."""
         self.results_text = "Initializing UI...\n"
-        self.latest_latencies = {}
+        self.latest_latencies: dict[str, float] = {}
 
         self.set_timer(0.5, self.update_world_map)
 
