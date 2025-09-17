@@ -96,7 +96,7 @@ Lon: -122.0775
 City: Mountain View, CA
 
 Cloudflare DNS:
-Name: cloudflare-dns  
+Name: cloudflare-dns
 IP: 1.1.1.1
 Lat: 37.7621
 Lon: -122.3971
@@ -113,7 +113,7 @@ Default AWS servers are defined in `src/laglens/config/servers.py`. Runtime serv
 
 Modify `src/laglens/config/laglens.tcss` to customize:
 - Color schemes and themes
-- Panel layouts and dimensions  
+- Panel layouts and dimensions
 - Scrollbar styling
 - Form input appearance
 - Typography and spacing

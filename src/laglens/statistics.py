@@ -58,10 +58,7 @@ class LatencyHistory:
     def _get_recent_data(self, server_ip: str, window_minutes: int):
         """Get measurements within the specified time window."""
         cutoff_time = datetime.now() - timedelta(minutes=window_minutes)
-        return [
-            m for m in self.history[server_ip]
-            if m["timestamp"] >= cutoff_time
-        ]
+        return [m for m in self.history[server_ip] if m["timestamp"] >= cutoff_time]
 
     def _calculate_packet_loss(self, recent):
         """Estimate packet loss as the percentage of missing measurements."""
@@ -88,15 +85,11 @@ class LatencySparkline:
         """Initialize with optional latency data."""
         self.data = list(data) if data else [0.0]
 
-    def create_sparkline(self,
-                        widget_id: str = None,
-                        widget_classes: str = "latency-sparkline") -> Sparkline:
+    def create_sparkline(
+        self, widget_id: str = None, widget_classes: str = "latency-sparkline"
+    ) -> Sparkline:
         """Create a new Sparkline widget with the current data."""
-        sparkline = Sparkline(
-            data=self.data,
-            id=widget_id,
-            classes=widget_classes
-        )
+        sparkline = Sparkline(data=self.data, id=widget_id, classes=widget_classes)
 
         # Set colors based on average latency using Color objects
         if self.data and len(self.data) > 0:
@@ -133,10 +126,9 @@ class LatencySparkline:
                 sparkline.max_color = Color.parse("bright_red")
 
     @staticmethod
-    def from_latency_history(latency_history: LatencyHistory,
-                           server_ip: str,
-                           minutes: int = 30) -> 'LatencySparkline':
+    def from_latency_history(
+        latency_history: LatencyHistory, server_ip: str, minutes: int = 30
+    ) -> "LatencySparkline":
         """Create a LatencySparkline from LatencyHistory data."""
         data = latency_history.get_sparkline_data(server_ip, minutes)
         return LatencySparkline(data)
-

@@ -1,11 +1,11 @@
-"""Server management functionality for LagLens application.
-"""
+"""Server management functionality for LagLens application."""
 
 from statistics import LatencySparkline
 
-from laglens.logger import get_logger
 from textual.containers import ScrollableContainer, Vertical
 from textual.widgets import Input, Static
+
+from laglens.logger import get_logger
 
 
 class ServerManager:
@@ -16,11 +16,18 @@ class ServerManager:
         self.app = app
         self.logger = get_logger("server_manager")
 
-    def validate_server_data(self, name: str, ip: str, latitude_str: str, longitude_str: str) -> tuple[bool, str, float, float]:
+    def validate_server_data(
+        self, name: str, ip: str, latitude_str: str, longitude_str: str
+    ) -> tuple[bool, str, float, float]:
         """Validate server input data. Returns (is_valid, error_message, latitude, longitude)."""
         # Validate required fields
         if not all([name, ip, latitude_str, longitude_str]):
-            return False, "Please fill in all required fields (Name, IP, Latitude, Longitude)", 0.0, 0.0
+            return (
+                False,
+                "Please fill in all required fields (Name, IP, Latitude, Longitude)",
+                0.0,
+                0.0,
+            )
 
         # Validate and convert coordinates
         try:
@@ -37,22 +44,24 @@ class ServerManager:
             return False, "Latitude and Longitude must be valid numbers", 0.0, 0.0
 
         # Check if server already exists
-        if any(server['ip'] == ip for server in self.app.runtime_servers):
+        if any(server["ip"] == ip for server in self.app.runtime_servers):
             return False, f"Server with IP {ip} already exists", 0.0, 0.0
 
-        if any(server['name'] == name for server in self.app.runtime_servers):
+        if any(server["name"] == name for server in self.app.runtime_servers):
             return False, f"Server with name '{name}' already exists", 0.0, 0.0
 
         return True, "", latitude, longitude
 
-    def add_server(self, name: str, ip: str, latitude: float, longitude: float, city: str) -> dict:
+    def add_server(
+        self, name: str, ip: str, latitude: float, longitude: float, city: str
+    ) -> dict:
         """Add a new server to the runtime list."""
         new_server = {
             "name": name,
             "ip": ip,
             "latitude": latitude,
             "longitude": longitude,
-            "city": city if city else "Unknown Location"
+            "city": city if city else "Unknown Location",
         }
 
         self.app.runtime_servers.append(new_server)
@@ -81,7 +90,7 @@ class ServerManager:
     def create_server_container(self, server: dict) -> Vertical:
         """Create a single server container with stats and sparkline."""
         server_ip = server["ip"]
-        server_name = server["name"]
+        # server_name = server["name"]  # Not used in this method
 
         # Only create new sparkline if it doesn't exist
         if server_ip not in self.app.sparklines:
@@ -97,9 +106,7 @@ class ServerManager:
         )
 
         server_container = Vertical(
-            Static(
-                id=f"stats-{server_ip.replace('.', '-')}", classes="server-stats"
-            ),
+            Static(id=f"stats-{server_ip.replace('.', '-')}", classes="server-stats"),
             sparkline_widget,
             id=f"server-container-{server_ip.replace('.', '-')}",
             classes="individual-server-container",
@@ -110,7 +117,9 @@ class ServerManager:
     def add_new_server_container(self, new_server: dict):
         """Add a new server container to the UI without refreshing existing ones."""
         try:
-            servers_container = self.app.query_one("#servers-container", ScrollableContainer)
+            servers_container = self.app.query_one(
+                "#servers-container", ScrollableContainer
+            )
 
             server_ip = new_server["ip"]
 
@@ -125,7 +134,8 @@ class ServerManager:
 
                 server_container = Vertical(
                     Static(
-                        id=f"stats-{server_ip.replace('.', '-')}", classes="server-stats"
+                        id=f"stats-{server_ip.replace('.', '-')}",
+                        classes="server-stats",
                     ),
                     sparkline_widget,
                     id=f"server-container-{server_ip.replace('.', '-')}",

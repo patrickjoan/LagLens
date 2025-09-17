@@ -117,7 +117,7 @@ ScrollableContainer {
 
 #servers-container {
     scrollbar-color: #404040;
-    scrollbar-color-hover: #505050;        
+    scrollbar-color-hover: #505050;
     scrollbar-background: #252525;
     scrollbar-size-vertical: 1;
 }

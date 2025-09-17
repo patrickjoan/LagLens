@@ -5,13 +5,60 @@ build/
 dist/
 wheels/
 *.egg-info
+*.egg
 
 # Virtual environments
-.venv
+.venv/
+venv/
+ENV/
+env/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Logs
 *.log
 *.log.*
+logs/
 
 # Statistics exports
 laglens_stats_*.json
+
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Pre-commit
+.pre-commit-config.yaml.backup
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.tox/
+
+# Distribution / packaging
+.Python
+env/
+bin/
+include/
+lib/
+pip-log.txt
+pip-delete-this-directory.txt

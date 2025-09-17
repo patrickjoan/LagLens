@@ -1,13 +1,13 @@
-"""UI update handlers for LagLens application.
-"""
+"""UI update handlers for LagLens application."""
 
 import time
 from datetime import datetime
 
-from laglens.logger import get_logger
 from rich.panel import Panel
 from rich.text import Text
 from textual.widgets import Sparkline, Static
+
+from laglens.logger import get_logger
 
 
 class UIUpdater:
@@ -63,7 +63,9 @@ class UIUpdater:
             f"--- Last Update: {time.strftime('%H:%M:%S')} ---\n\n", style="bold white"
         )
 
-        tasks = [self.app.ping_server_async(server["ip"]) for server in self.app.servers]
+        tasks = [
+            self.app.ping_server_async(server["ip"]) for server in self.app.servers
+        ]
         results = await self.app.gather_ping_results(tasks)
 
         for server, result in zip(self.app.servers, results, strict=False):
@@ -77,7 +79,9 @@ class UIUpdater:
             else:
                 latency, indicator_text = result
                 self.app.latest_latencies[server_ip] = latency
-                self.app.latency_history.add_measurement(server_ip, latency, current_time)
+                self.app.latency_history.add_measurement(
+                    server_ip, latency, current_time
+                )
 
                 results_text.append(f"{server_name:<20} : ", style="white")
                 results_text.append(indicator_text)
@@ -146,10 +150,16 @@ class UIUpdater:
                 widget_id = f"sparkline-{server_ip.replace('.', '-')}"
                 try:
                     sparkline_widget = self.app.query_one(f"#{widget_id}", Sparkline)
-                    self.app.sparklines[server_ip].update_sparkline_widget(sparkline_widget)
+                    self.app.sparklines[server_ip].update_sparkline_widget(
+                        sparkline_widget
+                    )
                 except Exception as widget_error:
-                    self.logger.debug(f"Sparkline widget not found for {server_ip}: {widget_error}")
-                    self.app.log(f"Sparkline widget not found for {server_ip}: {widget_error}")
+                    self.logger.debug(
+                        f"Sparkline widget not found for {server_ip}: {widget_error}"
+                    )
+                    self.app.log(
+                        f"Sparkline widget not found for {server_ip}: {widget_error}"
+                    )
 
         except Exception as e:
             self.logger.warning(f"Failed to update sparkline for {server_ip}: {e}")

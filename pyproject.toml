@@ -15,10 +15,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "mypy>=1.17.0", 
+    "mypy>=1.17.0",
     "ruff>=0.12.5",
     "pre-commit>=4.0.0",
-    "deptry>=0.20.0", 
+    "deptry>=0.20.0",
     "mkdocs>=1.6.0",
     "pytest-cov>=5.0.0",
 ]
@@ -35,7 +35,6 @@ select = [
   "I",    # Isort
   "C",    # Complexity
   "N",    # Naming conventions
-  "D",    # Pydocstyle (optional, can be noisy)
   "UP",   # Pyupgrade
   "B",    # Bugbear
   "SIM",  # Simplifiable
@@ -46,6 +45,12 @@ ignore = [
   "D100", # Missing docstring in public module (if you prefer not to require module docstrings initially)
   "D104", # Missing docstring in public package (for __init__.py)
   "D105", # Missing docstring in magic method
+  "D203", # 1 blank line required before class docstring
+  "D211", # No blank lines allowed before class docstring
+  "D212", # Multi-line docstring summary should start at the first line
+  "D213", # Multi-line docstring summary should start at the second line
+  "D401", # First line of docstring should be in imperative mood
+  "E501", # Line too long (we'll handle this with formatter)
 ]
 
 [tool.mypy]
@@ -57,6 +62,9 @@ disallow_any_unimported = true
 no_implicit_optional = true
 check_untyped_defs = true
 ignore_missing_imports = true
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
 exclude = ["venv/", ".venv/", "build/", "dist/"]
 
 [tool.coverage.run]

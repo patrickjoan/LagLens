@@ -5,7 +5,6 @@ from statistics import LatencyHistory
 
 from config.config import BINDINGS
 from config.servers import AWS_SERVERS
-from laglens.logger import get_logger
 from ping import get_latency_indicator, ping_server
 from server_manager import ServerManager
 from textual.app import App, ComposeResult
@@ -14,6 +13,8 @@ from textual.widgets import Button, Footer, Header, Input, Static
 from ui.forms import AddServerForm
 from ui_updater import UIUpdater
 from world_map import WorldMap
+
+from laglens.logger import get_logger
 
 
 class LagLensApp(App):
@@ -76,8 +77,8 @@ class LagLensApp(App):
         try:
             name_input = self.query_one("#server-name", Input)
             name_input.focus()
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.debug(f"Could not focus on server name input: {e}")
 
     def action_clear_form(self) -> None:
         """Clear the add server form."""
