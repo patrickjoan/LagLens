@@ -1,4 +1,4 @@
-from logger import get_logger
+from laglens.logger import get_logger
 from ping3 import errors, ping
 from rich.text import Text
 

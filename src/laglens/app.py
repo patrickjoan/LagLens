@@ -5,7 +5,7 @@ from statistics import LatencyHistory
 
 from config.config import BINDINGS
 from config.servers import AWS_SERVERS
-from logger import get_logger
+from laglens.logger import get_logger
 from ping import get_latency_indicator, ping_server
 from server_manager import ServerManager
 from textual.app import App, ComposeResult

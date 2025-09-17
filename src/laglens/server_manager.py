@@ -3,7 +3,7 @@
 
 from statistics import LatencySparkline
 
-from logger import get_logger
+from laglens.logger import get_logger
 from textual.containers import ScrollableContainer, Vertical
 from textual.widgets import Input, Static
 

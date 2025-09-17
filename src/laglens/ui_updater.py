@@ -4,7 +4,7 @@
 import time
 from datetime import datetime
 
-from logger import get_logger
+from laglens.logger import get_logger
 from rich.panel import Panel
 from rich.text import Text
 from textual.widgets import Sparkline, Static
