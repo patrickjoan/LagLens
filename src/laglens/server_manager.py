@@ -3,8 +3,8 @@
 from textual.containers import ScrollableContainer, Vertical
 from textual.widgets import Input, Static
 
-from laglens.logger import get_logger
 from laglens.latency_stats import LatencySparkline
+from laglens.logger import get_logger
 
 
 class ServerManager:

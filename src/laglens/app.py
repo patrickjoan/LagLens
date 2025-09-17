@@ -13,8 +13,8 @@ from ui.forms import AddServerForm
 from ui_updater import UIUpdater
 from world_map import WorldMap
 
-from laglens.logger import get_logger
 from laglens.latency_stats import LatencyHistory
+from laglens.logger import get_logger
 
 
 class LagLensApp(App):

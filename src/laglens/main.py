@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 # Add the src directory to the Python path for direct execution
 if __name__ == "__main__":
@@ -12,6 +12,7 @@ if __name__ == "__main__":
         sys.path.insert(0, src_dir)
 
 # Now we can use absolute imports that work both ways
+from laglens.app import LagLensApp
 from laglens.config.config import (
     LOG_BACKUP_COUNT,
     LOG_FILE,
@@ -20,7 +21,6 @@ from laglens.config.config import (
     LOG_MAX_SIZE,
 )
 from laglens.logger import get_logger, setup_logging
-from laglens.app import LagLensApp
 
 
 def main():
